@@ -1,6 +1,16 @@
 # Talos Kubernetes Homelab
 
-A documented bare-metal Kubernetes homelab built with **Talos Linux**, focused on immutable infrastructure, Kubernetes operations, GitOps, networking, monitoring, and security-aware system administration.
+This repository documents my bare-metal Kubernetes homelab built with **Talos Linux** on a small form factor PC.
+
+The goal of this project is to learn Kubernetes and platform engineering by running a real cluster on real hardware, not just local containers or cloud tutorials. I chose Talos Linux because it is purpose-built for Kubernetes, immutable, API-managed, and closer to modern production infrastructure than a traditional Ubuntu server install.
+
+## Current Status
+
+✅ Hardware acquired  
+✅ Talos Linux booted from USB  
+✅ Talos installed to the internal SSD  
+✅ Single-node Kubernetes cluster bootstrapped  
+⏭️ Next: configure GitOps, deploy workloads, add monitoring, and document the full operating model
 
 ## Hardware
 
@@ -8,15 +18,9 @@ A documented bare-metal Kubernetes homelab built with **Talos Linux**, focused o
 - **CPU:** Intel Core i5-8500T
 - **RAM:** 16GB
 - **Storage:** 256GB SSD
-- **Network:** Ethernet recommended
+- **Network:** Ethernet
 
-## Goal
-
-Build a practical Kubernetes homelab on real hardware using Talos Linux instead of a traditional general-purpose Linux server.
-
-Talos is designed specifically for Kubernetes. It is immutable, API-managed, minimal, and more production-like than a normal Ubuntu install.
-
-## Planned Architecture
+## Architecture
 
 ```text
 MacBook / Admin Machine
@@ -40,24 +44,35 @@ MacBook / Admin Machine
 
 ## Why Talos?
 
-- Purpose-built for Kubernetes
-- Immutable operating system
-- No SSH or package manager on the node
+I originally considered Ubuntu Server with k3s, but decided to use Talos Linux because it gives the project a stronger infrastructure focus.
+
+Talos is different from a normal Linux server:
+
+- No SSH into the node
+- No traditional package manager
+- Minimal immutable operating system
 - Managed through `talosctl`
-- Smaller attack surface than a traditional Linux server
-- Strong resume signal for Kubernetes/platform engineering
+- Designed specifically for Kubernetes
+- Smaller attack surface
+- Better fit for learning modern Kubernetes operations
 
-## Initial Install Plan
+## Setup Journey
 
-1. Download Talos Linux metal image
-2. Boot the homelab machine from USB
-3. Generate Talos machine configuration
-4. Install Talos to the internal SSD
-5. Bootstrap the single-node Kubernetes cluster
-6. Configure `kubectl` from the admin machine
-7. Deploy a test workload
-8. Add GitOps with Argo CD
-9. Add monitoring, ingress, and security-focused workloads
+The machine arrived with Windows preinstalled, so the first major step was wiping the internal drive and replacing it with Talos Linux.
+
+High-level process:
+
+1. Downloaded the Talos `metal-amd64.iso`
+2. Flashed it to a USB drive with Raspberry Pi Imager
+3. Booted the homelab machine from USB
+4. Found the node IP on the Talos dashboard
+5. Generated Talos machine configs from my Mac
+6. Enabled scheduling on the control plane for a single-node cluster
+7. Applied the Talos control plane config
+8. Installed Talos to the internal SSD
+9. Rebooted into the installed system
+10. Bootstrapped Kubernetes
+11. Confirmed the cluster was up with `kubectl`
 
 ## Documentation
 
@@ -66,6 +81,7 @@ MacBook / Admin Machine
 - [Admin Workstation Setup](docs/03-admin-workstation-setup.md)
 - [Cluster Bootstrap](docs/04-cluster-bootstrap.md)
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
+- [Build Log](docs/build-log.md)
 - [Resume Notes](docs/resume-notes.md)
 
 ## Skills Demonstrated
@@ -73,11 +89,17 @@ MacBook / Admin Machine
 - Kubernetes administration
 - Talos Linux / immutable infrastructure
 - Bare-metal cluster operations
-- Infrastructure-as-code style documentation
+- `talosctl` and `kubectl`
+- Linux/Kubernetes networking concepts
+- Infrastructure documentation
 - GitOps planning
-- Networking and cluster access
 - Security-aware system design
 
-## Status
+## Next Steps
 
-**Current phase:** Hardware acquired, Talos Linux installation planned.
+- Commit sanitized cluster setup notes
+- Deploy a simple test workload
+- Install Argo CD for GitOps
+- Add private access with Tailscale in-cluster
+- Add monitoring and dashboards
+- Deploy security-focused workloads for experimentation
