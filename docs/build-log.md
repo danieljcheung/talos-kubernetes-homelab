@@ -161,3 +161,88 @@ The next technical milestones are:
 4. Connect Argo CD to this GitHub repository
 5. Let Argo CD manage the test application automatically
 
+
+## Phase 10 — Installing Argo CD
+
+After confirming the cluster could run a manual nginx workload, I installed Argo CD to move toward GitOps.
+
+I created a dedicated namespace for Argo CD:
+
+```bash
+kubectl create namespace argocd
+```
+
+Then I installed the official Argo CD manifests:
+
+```bash
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+I watched the Argo CD pods come online:
+
+```bash
+kubectl get pods -n argocd
+```
+
+To access the UI locally, I used port-forwarding:
+
+```bash
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+```
+
+Then I opened:
+
+```text
+https://localhost:8080
+```
+
+This gave me a self-hosted Argo CD instance running inside my own Kubernetes cluster.
+
+## Phase 11 — First GitOps Application
+
+After publishing this repository to GitHub, I connected Argo CD to it and created my first GitOps-managed application.
+
+Argo CD application settings:
+
+```text
+Application name: nginx
+Project: default
+Repository: https://github.com/danieljcheung/talos-kubernetes-homelab.git
+Revision: HEAD
+Path: manifests/nginx
+Cluster: https://kubernetes.default.svc
+Namespace: default
+Sync policy: Manual
+```
+
+After creating the application, I synced it from the Argo CD UI.
+
+At this point, the deployment flow became:
+
+```text
+GitHub repository
+        ↓
+Argo CD watches manifests/nginx
+        ↓
+Argo CD applies Kubernetes manifests
+        ↓
+Talos Kubernetes cluster runs nginx
+```
+
+This was the first GitOps milestone for the homelab.
+
+## What This Enables
+
+With Argo CD connected to GitHub, the cluster can now be managed declaratively.
+
+Instead of manually creating resources with one-off `kubectl` commands, I can define the desired state in Git and let Argo CD reconcile the cluster toward that state.
+
+This enables:
+
+- version-controlled infrastructure changes
+- repeatable application deployments
+- visible sync and health status
+- drift detection between Git and the live cluster
+- a foundation for managing real homelab services
+
+The next step is to replace the generic nginx test with a small custom homelab landing page, then continue adding services through GitOps.

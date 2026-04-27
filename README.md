@@ -11,7 +11,10 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Talos installed to the internal SSD  
 ✅ Single-node Kubernetes cluster bootstrapped  
 ✅ First nginx workload deployed and exposed with NodePort  
-⏭️ Next: publish repo, install Argo CD, and move workloads into GitOps
+✅ Public GitHub repository published  
+✅ Argo CD installed inside the cluster  
+✅ First GitOps app synced from GitHub  
+⏭️ Next: replace nginx with a custom homelab landing page, then add Tailscale and monitoring
 
 ## Hardware
 
@@ -82,6 +85,7 @@ High-level process:
 - [Admin Workstation Setup](docs/03-admin-workstation-setup.md)
 - [Cluster Bootstrap](docs/04-cluster-bootstrap.md)
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
+- [Argo CD GitOps Setup](docs/06-argocd-gitops.md)
 - [Build Log](docs/build-log.md)
 - [nginx Test Workload](manifests/nginx/README.md)
 - [Resume Notes](docs/resume-notes.md)
@@ -99,9 +103,8 @@ High-level process:
 
 ## Next Steps
 
-- Publish this documentation repository publicly on GitHub
-- Convert the first workload into Git-managed manifests
-- Install Argo CD for GitOps
+- Replace nginx with a custom homelab landing page
+- Enable Argo CD auto-sync after manual sync is understood
 - Add private access with Tailscale in-cluster
 - Add monitoring and dashboards
 - Deploy security-focused workloads for experimentation
