@@ -1,8 +1,8 @@
-# nginx Test Workload
+# nginx Landing Page
 
-This directory contains the first Kubernetes workload for the Talos homelab.
+This directory contains the lightweight nginx landing page for Daniel's Talos Kubernetes Homelab.
 
-It replaces the initial manual `kubectl create deployment` test with declarative Kubernetes manifests that can later be managed by Argo CD.
+Argo CD should continue syncing this application directly from `manifests/nginx`. The page HTML is stored in a Kubernetes `ConfigMap`, and the nginx deployment mounts that file into `/usr/share/nginx/html/index.html` by using `subPath`.
 
 ## Apply Manually
 
@@ -15,14 +15,19 @@ kubectl apply -f manifests/nginx/
 ```bash
 kubectl get pods
 kubectl get svc nginx
+kubectl get configmap nginx-landing-page
 ```
 
-## Purpose
+Then open the nginx `NodePort` in a browser to confirm the custom landing page is being served.
 
-This workload validates the basic cluster path:
+## Deployment Model
 
 ```text
-Kubernetes Deployment → Pod → Service → NodePort → LAN browser access
+GitHub -> Argo CD -> manifests/nginx -> Deployment + ConfigMap -> nginx Pod -> NodePort
 ```
 
-Later, this same workload can be used as the first GitOps-managed app.
+## Files
+
+- `configmap.yaml`: self-contained `index.html` with inline CSS for the landing page
+- `deployment.yaml`: nginx deployment mounting the ConfigMap file at the default web root
+- `service.yaml`: existing `NodePort` service for LAN access

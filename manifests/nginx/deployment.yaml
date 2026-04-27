@@ -14,8 +14,16 @@ spec:
       labels:
         app: nginx
     spec:
+      volumes:
+        - name: landing-page
+          configMap:
+            name: nginx-landing-page
       containers:
         - name: nginx
           image: nginx:latest
           ports:
             - containerPort: 80
+          volumeMounts:
+            - name: landing-page
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
