@@ -8,22 +8,30 @@ This homelab runs on a compact Intel-based system:
 - 16GB RAM
 - 256GB SSD
 
-The machine is powerful enough for a focused single-node Kubernetes cluster while staying lightweight and power-efficient.
+The machine is well suited for a focused single-node Kubernetes cluster. The limited RAM and storage make a bare-metal Kubernetes operating system a better starting point than a virtualized Proxmox-based lab.
 
-## Why Single-Node k3s First?
+## Why Talos Linux?
 
-Although Proxmox and multi-node Kubernetes are useful, this system has limited RAM and storage for multiple VMs. Starting with bare-metal Ubuntu Server and k3s keeps the setup simple and leaves more resources available for workloads.
+Talos Linux is a minimal, immutable operating system built specifically for Kubernetes.
 
-A future upgrade to 32GB RAM and larger storage would make Proxmox or a multi-node virtualized lab more practical.
+Unlike Ubuntu Server, Talos does not expose normal SSH administration or a traditional package manager. The node is managed through the Talos API using `talosctl`, which makes the setup more similar to production-grade Kubernetes infrastructure.
+
+## Why Single-Node First?
+
+A single-node cluster is the best first step for this hardware because it avoids the overhead of multiple VMs while still providing real Kubernetes experience.
+
+Future upgrades could include:
+
+- Additional physical nodes
+- More RAM
+- Larger SSD/NVMe storage
+- Dedicated NAS or external storage
+- Multi-node high availability cluster design
 
 ## Project Goals
 
-The goal is to build practical infrastructure experience that connects directly to software engineering, cloud, DevOps, and security work.
-
-Key outcomes:
-
-- Learn Kubernetes by operating a real cluster
-- Deploy real applications instead of toy-only examples
-- Practice secure Linux administration
-- Use GitHub as the source of truth for documentation and configuration
-- Build a resume-ready infrastructure project
+- Build and operate a real Kubernetes cluster
+- Learn Talos Linux and immutable infrastructure concepts
+- Practice Kubernetes networking, workloads, and GitOps
+- Document the process clearly for GitHub and resume use
+- Add monitoring, ingress, and security-focused workloads over time

@@ -1,0 +1,9 @@
+# Talos secrets and local machine configs
+private/
+*.talosconfig
+talosconfig
+controlplane.yaml
+worker.yaml
+
+# macOS
+.DS_Store

@@ -1,6 +1,6 @@
-# Homelab Kubernetes Cluster
+# Talos Kubernetes Homelab
 
-A documented home lab project for learning Kubernetes, Linux server administration, networking, GitOps, monitoring, and security fundamentals on real hardware.
+A documented bare-metal Kubernetes homelab built with **Talos Linux**, focused on immutable infrastructure, Kubernetes operations, GitOps, networking, monitoring, and security-aware system administration.
 
 ## Hardware
 
@@ -12,69 +12,72 @@ A documented home lab project for learning Kubernetes, Linux server administrati
 
 ## Goal
 
-Build a practical single-node Kubernetes homelab using Ubuntu Server and k3s, then progressively add production-style tooling:
+Build a practical Kubernetes homelab on real hardware using Talos Linux instead of a traditional general-purpose Linux server.
 
-- Linux server setup and hardening
-- Single-node k3s cluster
-- Containerized workloads
-- Private remote access with Tailscale
-- GitOps deployment with Argo CD
-- Ingress and TLS
-- Monitoring and logs
-- Security-focused experimentation
+Talos is designed specifically for Kubernetes. It is immutable, API-managed, minimal, and more production-like than a normal Ubuntu install.
 
 ## Planned Architecture
 
 ```text
 MacBook / Admin Machine
         |
-        | SSH / kubectl / GitOps
+        | talosctl / kubectl / GitOps
         v
 +-----------------------------+
 | Homelab Node                |
 | Intel i5-8500T              |
 | 16GB RAM / 256GB SSD        |
-| Ubuntu Server 24.04 LTS     |
-| k3s single-node cluster     |
+| Talos Linux                 |
+| Single-node Kubernetes      |
 +-----------------------------+
         |
-        +-- Core services
+        +-- Core Kubernetes services
         +-- Test applications
+        +-- GitOps with Argo CD
         +-- Monitoring stack
         +-- Security lab workloads
 ```
 
+## Why Talos?
+
+- Purpose-built for Kubernetes
+- Immutable operating system
+- No SSH or package manager on the node
+- Managed through `talosctl`
+- Smaller attack surface than a traditional Linux server
+- Strong resume signal for Kubernetes/platform engineering
+
 ## Initial Install Plan
 
-1. Install Ubuntu Server 24.04 LTS
-2. Enable OpenSSH during installation
-3. Update system packages
-4. Configure static/reserved network address
-5. Install k3s
-6. Configure kubectl access from admin machine
-7. Deploy first test workload
+1. Download Talos Linux metal image
+2. Boot the homelab machine from USB
+3. Generate Talos machine configuration
+4. Install Talos to the internal SSD
+5. Bootstrap the single-node Kubernetes cluster
+6. Configure `kubectl` from the admin machine
+7. Deploy a test workload
 8. Add GitOps with Argo CD
-9. Add monitoring and documentation
+9. Add monitoring, ingress, and security-focused workloads
 
 ## Documentation
 
 - [Hardware and Goals](docs/01-hardware-and-goals.md)
-- [Ubuntu Server Installation](docs/02-ubuntu-server-install.md)
-- [Post-Install Setup](docs/03-post-install-setup.md)
-- [k3s Installation](docs/04-k3s-install.md)
+- [Talos Linux Installation](docs/02-talos-linux-install.md)
+- [Admin Workstation Setup](docs/03-admin-workstation-setup.md)
+- [Cluster Bootstrap](docs/04-cluster-bootstrap.md)
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
 - [Resume Notes](docs/resume-notes.md)
 
 ## Skills Demonstrated
 
-- Linux server administration
-- Kubernetes fundamentals
-- Networking and SSH access
-- Infrastructure documentation
-- Git/GitHub project maintenance
-- Homelab architecture planning
-- Security-aware system setup
+- Kubernetes administration
+- Talos Linux / immutable infrastructure
+- Bare-metal cluster operations
+- Infrastructure-as-code style documentation
+- GitOps planning
+- Networking and cluster access
+- Security-aware system design
 
 ## Status
 
-**Current phase:** Hardware acquired, Ubuntu Server installation planned.
+**Current phase:** Hardware acquired, Talos Linux installation planned.
