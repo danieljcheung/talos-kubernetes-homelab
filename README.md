@@ -10,7 +10,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Talos Linux booted from USB  
 ✅ Talos installed to the internal SSD  
 ✅ Single-node Kubernetes cluster bootstrapped  
-⏭️ Next: configure GitOps, deploy workloads, add monitoring, and document the full operating model
+✅ First nginx workload deployed and exposed with NodePort  
+⏭️ Next: publish repo, install Argo CD, and move workloads into GitOps
 
 ## Hardware
 
@@ -82,6 +83,7 @@ High-level process:
 - [Cluster Bootstrap](docs/04-cluster-bootstrap.md)
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
 - [Build Log](docs/build-log.md)
+- [nginx Test Workload](manifests/nginx/README.md)
 - [Resume Notes](docs/resume-notes.md)
 
 ## Skills Demonstrated
@@ -97,8 +99,8 @@ High-level process:
 
 ## Next Steps
 
-- Commit sanitized cluster setup notes
-- Deploy a simple test workload
+- Publish this documentation repository publicly on GitHub
+- Convert the first workload into Git-managed manifests
 - Install Argo CD for GitOps
 - Add private access with Tailscale in-cluster
 - Add monitoring and dashboards
