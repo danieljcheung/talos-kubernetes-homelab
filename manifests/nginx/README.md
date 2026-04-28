@@ -1,33 +1,48 @@
-# nginx Landing Page
+# nginx Personal Website
 
-This directory contains the lightweight nginx landing page for Daniel's Talos Kubernetes Homelab.
+This directory contains Daniel Cheung's personal website served by nginx inside Kubernetes.
 
-Argo CD should continue syncing this application directly from `manifests/nginx`. The page HTML is stored in a Kubernetes `ConfigMap`, and the nginx deployment mounts that file into `/usr/share/nginx/html/index.html` by using `subPath`.
+Argo CD watches this directory through the `nginx` app, so commits to GitHub become the desired state for the live site.
 
-## Apply Manually
+## Current State
 
-```bash
-kubectl apply -f manifests/nginx/
-```
-
-## Verify
-
-```bash
-kubectl get pods
-kubectl get svc nginx
-kubectl get configmap nginx-landing-page
-```
-
-Then open the nginx `NodePort` in a browser to confirm the custom landing page is being served.
+- Static site files are stored in `configmap.yaml`:
+  - `index.html`
+  - `styles.css`
+- `deployment.yaml` mounts both files into nginx's web root.
+- `service.yaml` exposes nginx internally as a `ClusterIP` service.
+- Public access is handled by Cloudflare Tunnel instead of NodePort/router port forwarding.
+- `https://danieljcheung.com` works.
+- `https://www.danieljcheung.com` still needs Cloudflare hostname/DNS cleanup.
 
 ## Deployment Model
 
 ```text
-GitHub -> Argo CD -> manifests/nginx -> Deployment + ConfigMap -> nginx Pod -> NodePort
+GitHub
+  -> Argo CD
+  -> manifests/nginx
+  -> ConfigMap + Deployment + ClusterIP Service
+  -> nginx pod
+  -> Cloudflare Tunnel
+  -> danieljcheung.com
+```
+
+## Verify In-Cluster Site
+
+```bash
+kubectl get pods -l app=nginx
+kubectl get svc nginx
+kubectl port-forward svc/nginx 8080:80
+```
+
+Then open:
+
+```text
+http://localhost:8080
 ```
 
 ## Files
 
-- `configmap.yaml`: self-contained `index.html` with inline CSS for the landing page
-- `deployment.yaml`: nginx deployment mounting the ConfigMap file at the default web root
-- `service.yaml`: existing `NodePort` service for LAN access
+- `configmap.yaml`: website `index.html` and `styles.css`
+- `deployment.yaml`: nginx deployment mounting both files
+- `service.yaml`: internal HTTP service for Cloudflare Tunnel routing

@@ -443,3 +443,93 @@ The homelab now has:
 - a documented separation between private admin services and future public workloads
 
 The next phase is to deploy a real persistent service, likely n8n with Postgres, through GitOps.
+
+## Phase 14 — Personal Website on Kubernetes
+
+I replaced the temporary nginx landing page with my personal website and kept the deployment GitOps-managed through Argo CD.
+
+The website is intentionally minimal and static. It is served by nginx from a Kubernetes `ConfigMap` containing:
+
+- `index.html`
+- `styles.css`
+
+The nginx deployment mounts both files into:
+
+```text
+/usr/share/nginx/html/index.html
+/usr/share/nginx/html/styles.css
+```
+
+This kept the application simple while still making the live site part of the cluster's declarative state.
+
+### Service Model
+
+The nginx Service was changed from `NodePort` to `ClusterIP`.
+
+Reason: the public site should be reached through Cloudflare Tunnel, not by exposing a node port or forwarding router traffic to the homelab.
+
+The internal service target is:
+
+```text
+http://nginx.default.svc.cluster.local:80
+```
+
+For local debugging, I can still use:
+
+```bash
+kubectl port-forward svc/nginx 8080:80
+```
+
+and open:
+
+```text
+http://localhost:8080
+```
+
+That local `127.0.0.1` endpoint is only a debugging tunnel from my workstation through the Kubernetes API; it is not the public serving path.
+
+## Phase 15 — Cloudflare Tunnel Public Site Access
+
+I bought the domain:
+
+```text
+danieljcheung.com
+```
+
+I then connected the Kubernetes-hosted nginx site through Cloudflare Tunnel.
+
+Current public state:
+
+- `https://danieljcheung.com` works
+- `https://www.danieljcheung.com` does not work yet
+
+The intended routing is:
+
+```text
+danieljcheung.com      -> Cloudflare Tunnel -> nginx.default.svc.cluster.local:80
+www.danieljcheung.com  -> Cloudflare Tunnel -> nginx.default.svc.cluster.local:80
+```
+
+The likely remaining fix is adding or correcting the `www` public hostname/DNS route in Cloudflare so it points to the same tunnel target as the root domain.
+
+### Security Posture
+
+This setup is secure enough for a personal static site because:
+
+- the site is static and has very low application attack surface
+- the Kubernetes Service is internal-only (`ClusterIP`)
+- there is no router port forwarding
+- Cloudflare Tunnel uses outbound connectivity from the cluster
+- no real tunnel token is committed to Git
+- admin dashboards remain private on Tailscale
+
+I would describe the setup as production-minded, not fully production-grade yet.
+
+Remaining production hardening:
+
+- pin `cloudflare/cloudflared` instead of using `latest`
+- add readiness/liveness probes
+- consider multiple cloudflared replicas
+- add NetworkPolicies
+- add monitoring/alerting
+- document rebuild/disaster recovery steps

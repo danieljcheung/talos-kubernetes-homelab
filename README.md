@@ -16,7 +16,10 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ First GitOps app synced from GitHub  
 ✅ Private Argo CD access configured over Tailscale  
 ✅ Headlamp dashboard installed and exposed privately over Tailscale  
-⏭️ Next: deploy n8n + Postgres through GitOps, then add monitoring
+✅ Personal website deployed through GitOps-managed nginx  
+✅ Cloudflare Tunnel serving `danieljcheung.com` without router port forwarding  
+⚠️ `www.danieljcheung.com` still needs DNS/tunnel hostname cleanup  
+⏭️ Next: fix `www`, then deploy n8n + Postgres through GitOps
 
 ## Hardware
 
@@ -42,7 +45,8 @@ MacBook / Admin Machine
 +-----------------------------+
         |
         +-- Core Kubernetes services
-        +-- Test applications
+        +-- Personal website via nginx
+        +-- Cloudflare Tunnel for public site traffic
         +-- GitOps with Argo CD
         +-- Monitoring stack
         +-- Security lab workloads
@@ -90,8 +94,10 @@ High-level process:
 - [Argo CD GitOps Setup](docs/06-argocd-gitops.md)
 - [Private Access with Tailscale](docs/07-tailscale-private-access.md)
 - [Kubernetes Dashboards](docs/08-kubernetes-dashboards.md)
+- [Personal Website and Cloudflare Tunnel](docs/09-personal-site-cloudflare.md)
 - [Build Log](docs/build-log.md)
-- [nginx Test Workload](manifests/nginx/README.md)
+- [nginx Personal Website](manifests/nginx/README.md)
+- [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
 - [Resume Notes](docs/resume-notes.md)
 
 ## Skills Demonstrated
@@ -105,12 +111,15 @@ High-level process:
 - GitOps with Argo CD
 - Private admin access with Tailscale
 - Kubernetes dashboard operations with Headlamp
+- Static website hosting on Kubernetes
+- Cloudflare Tunnel public access without port forwarding
 - Security-aware system design
 
 ## Next Steps
 
+- Fix `www.danieljcheung.com` Cloudflare hostname/DNS routing
+- Pin and harden the `cloudflared` deployment
 - Deploy n8n and Postgres through GitOps
 - Add backup/restore workflows for persistent data
 - Add monitoring and alerting
-- Build and expose a public personal site separately from admin dashboards
 - Deploy security-focused workloads for experimentation
