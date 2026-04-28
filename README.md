@@ -19,7 +19,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Personal website deployed through GitOps-managed nginx  
 ✅ Cloudflare Tunnel serving `danieljcheung.com` and `www.danieljcheung.com` without router port forwarding
 ✅ First real Kubernetes incident documented with operations lessons
-⏭️ Next: pin/harden Cloudflare Tunnel, then deploy n8n + Postgres through GitOps
+✅ Observability stack installed: Prometheus, Grafana, Alertmanager, Loki, and Alloy
+⏭️ Next: expose Grafana privately over Tailscale, configure alerts, then add storage/backups
 
 ## Hardware
 
@@ -96,9 +97,11 @@ High-level process:
 - [Kubernetes Dashboards](docs/08-kubernetes-dashboards.md)
 - [Personal Website and Cloudflare Tunnel](docs/09-personal-site-cloudflare.md)
 - [Kubernetes Operations Lessons](docs/10-kubernetes-operations-lessons.md)
+- [Observability Stack](docs/11-observability-stack.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
+- [Monitoring Manifests](manifests/monitoring/README.md)
 - [Resume Notes](docs/resume-notes.md)
 
 ## Skills Demonstrated
@@ -121,5 +124,5 @@ High-level process:
 - Pin and harden the `cloudflared` deployment
 - Deploy n8n and Postgres through GitOps
 - Add backup/restore workflows for persistent data
-- Add monitoring and alerting
+- Configure Alertmanager routes and production-grade alerting
 - Deploy security-focused workloads for experimentation

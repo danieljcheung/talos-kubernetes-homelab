@@ -604,3 +604,57 @@ A separate concise notes page was added at:
 ```text
 docs/10-kubernetes-operations-lessons.md
 ```
+
+
+## Phase 17 — Observability Stack: Prometheus, Grafana, Loki, and Alloy
+
+I added the first full observability stack to the homelab.
+
+The stack is:
+
+```text
+Metrics:
+node-exporter + kube-state-metrics
+        ↓
+Prometheus
+        ↓
+Grafana
+
+Logs:
+Kubernetes pod logs
+        ↓
+Grafana Alloy
+        ↓
+Loki
+        ↓
+Grafana
+
+Alerts:
+Prometheus rules
+        ↓
+Alertmanager
+```
+
+Installed Helm releases in the `monitoring` namespace:
+
+- `monitoring` — kube-prometheus-stack
+- `loki` — Grafana Loki
+- `alloy` — Grafana Alloy
+
+Key lessons:
+
+- Prometheus is for metrics, Loki is for logs, Grafana is the UI, and Alloy is the collector.
+- Node Exporter needs host-level access, so Pod Security blocked it until the `monitoring` namespace was explicitly labeled privileged.
+- Privileged Pod Security should be scoped to infrastructure namespaces, not applied globally.
+- Loki does not collect logs by itself; Alloy ships pod logs to Loki.
+- Loki's Helm chart defaults to a scalable mode, so single-node homelab installs need explicit `SingleBinary` settings and `read/write/backend` replicas set to `0`.
+- Because the cluster does not have a storage provisioner yet, Loki is running without persistence for now.
+- With persistence disabled, Loki needed writable paths under `/tmp/loki` instead of the default `/var/loki` read-only container filesystem.
+
+Current limitation: this is learning-grade observability. Before relying on it for production-style incident response, add private Grafana access, real secrets, Alertmanager routes, persistent storage, and backups.
+
+Detailed notes were added at:
+
+```text
+docs/11-observability-stack.md
+```
