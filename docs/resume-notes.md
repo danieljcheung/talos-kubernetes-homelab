@@ -6,7 +6,7 @@ Built and documented a bare-metal Kubernetes homelab using Talos Linux, focusing
 
 ## Stronger Version After GitOps/Monitoring
 
-Designed and operated a bare-metal Talos Linux Kubernetes homelab with GitOps-based deployments, private cluster administration, monitoring, and documented infrastructure workflows on real hardware.
+Designed and operated a bare-metal Talos Linux Kubernetes homelab with GitOps-based deployments, private Tailscale admin access, Kubernetes dashboards, and documented infrastructure workflows on real hardware.
 
 ## Skills to Mention
 
@@ -16,6 +16,9 @@ Designed and operated a bare-metal Talos Linux Kubernetes homelab with GitOps-ba
 - Bare-metal cluster administration
 - `talosctl` / `kubectl`
 - GitOps / Argo CD
+- Tailscale private networking
+- Kubernetes Ingress and Services
+- Headlamp dashboard operations
 - Containerized deployments
 - Monitoring and observability
 - Security-focused infrastructure design

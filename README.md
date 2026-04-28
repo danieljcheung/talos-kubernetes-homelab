@@ -15,7 +15,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Argo CD installed inside the cluster  
 ✅ First GitOps app synced from GitHub  
 ✅ Private Argo CD access configured over Tailscale  
-⏭️ Next: build and expose a public personal site, then add monitoring
+✅ Headlamp dashboard installed and exposed privately over Tailscale  
+⏭️ Next: deploy n8n + Postgres through GitOps, then add monitoring
 
 ## Hardware
 
@@ -88,6 +89,7 @@ High-level process:
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
 - [Argo CD GitOps Setup](docs/06-argocd-gitops.md)
 - [Private Access with Tailscale](docs/07-tailscale-private-access.md)
+- [Kubernetes Dashboards](docs/08-kubernetes-dashboards.md)
 - [Build Log](docs/build-log.md)
 - [nginx Test Workload](manifests/nginx/README.md)
 - [Resume Notes](docs/resume-notes.md)
@@ -100,13 +102,15 @@ High-level process:
 - `talosctl` and `kubectl`
 - Linux/Kubernetes networking concepts
 - Infrastructure documentation
-- GitOps planning
+- GitOps with Argo CD
+- Private admin access with Tailscale
+- Kubernetes dashboard operations with Headlamp
 - Security-aware system design
 
 ## Next Steps
 
-- Replace nginx with a custom homelab landing page
-- Enable Argo CD auto-sync after manual sync is understood
-- Build and expose a public personal site
-- Add monitoring and dashboards
+- Deploy n8n and Postgres through GitOps
+- Add backup/restore workflows for persistent data
+- Add monitoring and alerting
+- Build and expose a public personal site separately from admin dashboards
 - Deploy security-focused workloads for experimentation

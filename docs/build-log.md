@@ -334,3 +334,112 @@ Public app plane: personal site / public workloads → Cloudflare Tunnel or publ
 ```
 
 This is a safer and more production-like pattern than putting admin dashboards directly on the public internet.
+
+## Phase 13 — Headlamp Kubernetes Dashboard
+
+After Argo CD was available privately through Tailscale, I added Headlamp as a Kubernetes dashboard.
+
+Argo CD answers the GitOps question:
+
+```text
+What does Git want the cluster to run?
+```
+
+Headlamp answers the live operations question:
+
+```text
+What is the cluster actually running right now?
+```
+
+This makes the homelab easier to operate because I can inspect namespaces, workloads, services, events, and other Kubernetes resources from a browser instead of relying only on `kubectl`.
+
+### Headlamp Service Discovery
+
+Headlamp was installed through Helm, but the namespace was not immediately obvious. I checked the cluster for the installed Service and pods:
+
+```bash
+kubectl get svc -A | grep -i headlamp
+kubectl get pods -A | grep -i headlamp
+```
+
+The Headlamp Service was installed in `kube-system` as:
+
+```text
+my-headlamp
+```
+
+The Service listens on port `80`, so the Tailscale Ingress points to:
+
+```text
+namespace: kube-system
+service: my-headlamp
+port: 80
+```
+
+### Private Headlamp Access over Tailscale
+
+I added a Tailscale Ingress for Headlamp:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: headlamp-tailscale
+  namespace: kube-system
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: my-headlamp
+      port:
+        number: 80
+  tls:
+    - hosts:
+        - headlamp
+```
+
+After applying it, Headlamp became available privately at:
+
+```text
+https://headlamp.tail2be9f6.ts.net
+```
+
+### Dashboard Access Pattern
+
+At this point the cluster has two private admin dashboards:
+
+```text
+https://argocd.tail2be9f6.ts.net   → GitOps control plane
+https://headlamp.tail2be9f6.ts.net → Kubernetes resource dashboard
+```
+
+Both are routed through the Tailscale Kubernetes Operator rather than being exposed publicly.
+
+The resulting admin plane is:
+
+```text
+Trusted device on Tailscale
+        ↓
+Tailscale HTTPS hostname
+        ↓
+Tailscale Kubernetes Operator
+        ↓
+Kubernetes Ingress
+        ↓
+Internal dashboard Service
+```
+
+This keeps cluster administration private while still making the dashboards convenient to use from my own devices.
+
+## Updated Current Result
+
+The homelab now has:
+
+- Talos Linux installed on bare metal
+- a single-node Kubernetes cluster
+- a GitOps workflow through Argo CD
+- private Argo CD access through Tailscale
+- private Headlamp access through Tailscale
+- a documented separation between private admin services and future public workloads
+
+The next phase is to deploy a real persistent service, likely n8n with Postgres, through GitOps.
