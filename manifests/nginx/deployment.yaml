@@ -27,3 +27,6 @@ spec:
             - name: landing-page
               mountPath: /usr/share/nginx/html/index.html
               subPath: index.html
+            - name: landing-page
+              mountPath: /usr/share/nginx/html/styles.css
+              subPath: styles.css
