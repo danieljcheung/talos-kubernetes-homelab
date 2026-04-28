@@ -14,7 +14,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Public GitHub repository published  
 ✅ Argo CD installed inside the cluster  
 ✅ First GitOps app synced from GitHub  
-⏭️ Next: replace nginx with a custom homelab landing page, then add Tailscale and monitoring
+✅ Private Argo CD access configured over Tailscale  
+⏭️ Next: build and expose a public personal site, then add monitoring
 
 ## Hardware
 
@@ -86,6 +87,7 @@ High-level process:
 - [Cluster Bootstrap](docs/04-cluster-bootstrap.md)
 - [GitOps Roadmap](docs/05-gitops-roadmap.md)
 - [Argo CD GitOps Setup](docs/06-argocd-gitops.md)
+- [Private Access with Tailscale](docs/07-tailscale-private-access.md)
 - [Build Log](docs/build-log.md)
 - [nginx Test Workload](manifests/nginx/README.md)
 - [Resume Notes](docs/resume-notes.md)
@@ -105,6 +107,6 @@ High-level process:
 
 - Replace nginx with a custom homelab landing page
 - Enable Argo CD auto-sync after manual sync is understood
-- Add private access with Tailscale in-cluster
+- Build and expose a public personal site
 - Add monitoring and dashboards
 - Deploy security-focused workloads for experimentation

@@ -246,3 +246,91 @@ This enables:
 - a foundation for managing real homelab services
 
 The next step is to replace the generic nginx test with a small custom homelab landing page, then continue adding services through GitOps.
+
+## Phase 12 — Private Argo CD Access over Tailscale
+
+After getting Argo CD working through local port-forwarding, I added private dashboard access using the Tailscale Kubernetes Operator.
+
+The goal was to avoid exposing the Argo CD admin dashboard to the public internet while still making it reachable from my own devices.
+
+The private access path is now:
+
+```text
+Mac / PC on Tailscale
+        ↓
+https://argocd.tail2be9f6.ts.net
+        ↓
+Tailscale Ingress
+        ↓
+argocd-server Service
+        ↓
+Argo CD pods
+```
+
+This created a cleaner operational model:
+
+- public services can be exposed separately through a public edge such as Cloudflare Tunnel
+- administrative services stay private on the tailnet
+- Kubernetes Services can be exposed without router port forwarding
+- access is tied to Tailscale identity instead of an open public endpoint
+
+### Operator Setup
+
+The Tailscale Kubernetes Operator was installed with Helm using an OAuth client restricted to Kubernetes-related tags and permissions.
+
+The operator added Kubernetes CRDs and controllers that allow Kubernetes resources to request Tailscale networking behavior.
+
+### Ingress Setup
+
+To expose Argo CD privately, I created a Kubernetes Ingress using the Tailscale ingress class:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-tailscale
+  namespace: argocd
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: argocd-server
+      port:
+        number: 443
+  tls:
+    - hosts:
+        - argocd
+```
+
+The important line is:
+
+```yaml
+ingressClassName: tailscale
+```
+
+That tells Kubernetes that this Ingress should be handled by the Tailscale Operator instead of a normal public ingress controller.
+
+After provisioning, Argo CD became reachable at:
+
+```text
+https://argocd.tail2be9f6.ts.net
+```
+
+## What I Learned
+
+This phase connected several Kubernetes concepts:
+
+- **CRDs** extend Kubernetes with new resource types used by operators.
+- **Operators** watch Kubernetes resources and automate infrastructure behavior.
+- **Ingress** defines HTTP/HTTPS routing into cluster Services.
+- **Ingress classes** select which controller should handle a given Ingress.
+- **Tailscale** can provide private zero-trust access to internal services without exposing them publicly.
+
+The key design decision was separating private admin access from public application hosting.
+
+```text
+Private admin plane: Argo CD, dashboards, internal tools → Tailscale
+Public app plane: personal site / public workloads → Cloudflare Tunnel or public ingress
+```
+
+This is a safer and more production-like pattern than putting admin dashboards directly on the public internet.
