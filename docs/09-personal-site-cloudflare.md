@@ -13,7 +13,7 @@ This phase publishes Daniel's personal website from the Talos Kubernetes homelab
 - The nginx Service is `ClusterIP`, not `NodePort`, so it is only reachable inside the cluster unless accessed through a controlled path.
 - Cloudflare Tunnel is being used for public access without router port forwarding.
 - `https://danieljcheung.com` works.
-- `https://www.danieljcheung.com` is not working yet and still needs DNS/tunnel hostname cleanup.
+- `https://www.danieljcheung.com` works after adding the matching Cloudflare Tunnel public hostname and allowing edge/config propagation.
 
 ## Architecture
 
@@ -52,9 +52,9 @@ danieljcheung.com      -> http://nginx.default.svc.cluster.local:80
 www.danieljcheung.com  -> http://nginx.default.svc.cluster.local:80
 ```
 
-The root hostname currently works. The `www` hostname still needs to be fixed in Cloudflare.
+Both the root hostname and `www` hostname should route to this same service target. If one hostname fails while the internal service works, suspect Cloudflare DNS/tunnel/edge propagation before changing nginx.
 
-## Likely Fix for `www`
+## `www` Hostname Checklist
 
 In Cloudflare Zero Trust tunnel settings, confirm there are two public hostnames:
 
@@ -121,3 +121,23 @@ To make this more production-grade:
 - add monitoring and alerting
 - document disaster recovery/rebuild steps
 - consider moving static files from ConfigMap to a versioned container image if the site grows
+
+
+## Diagnostic Commands
+
+Use these when one hostname works and the other does not:
+
+```bash
+dig +short danieljcheung.com
+dig +short www.danieljcheung.com
+curl -I https://danieljcheung.com
+curl -I https://www.danieljcheung.com
+kubectl -n cloudflare logs deploy/cloudflared --tail=100
+```
+
+To confirm the Kubernetes Service itself is healthy:
+
+```bash
+kubectl run www-check --rm -i --restart=Never --image=curlimages/curl:8.10.1 -- \
+  sh -c 'curl -I -H "Host: danieljcheung.com" http://nginx.default.svc.cluster.local:80; curl -I -H "Host: www.danieljcheung.com" http://nginx.default.svc.cluster.local:80'
+```

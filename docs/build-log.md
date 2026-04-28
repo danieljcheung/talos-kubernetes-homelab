@@ -533,3 +533,74 @@ Remaining production hardening:
 - add NetworkPolicies
 - add monitoring/alerting
 - document rebuild/disaster recovery steps
+
+## Phase 16 — First Real Kubernetes Incident and Operations Lessons
+
+The first meaningful incident was waking up to several pods in `CrashLoopBackOff` or error states at the same time.
+
+Affected components included:
+
+- CoreDNS
+- Argo CD components
+- Tailscale ingress pods
+- Headlamp
+- Cloudflare Tunnel
+
+The key lesson was that many unrelated pods failing together usually points to shared cluster infrastructure, not separate app bugs.
+
+The useful diagnostic path was:
+
+```bash
+kubectl get nodes -o wide
+kubectl get pods -A -o wide
+kubectl get events -A --sort-by=.lastTimestamp | tail -80
+kubectl -n kube-system logs ds/kube-proxy --tail=100
+kubectl -n kube-system logs ds/kube-flannel --tail=100
+kubectl -n kube-system logs deploy/coredns --tail=100
+```
+
+The broader Kubernetes lesson was:
+
+```text
+Kubernetes can recreate desired state somewhere healthy.
+It cannot magically repair the only unhealthy node underneath a single-node cluster.
+```
+
+In a single-node cluster, replicas can help with app/container crashes, but they cannot protect against node-level failures such as broken CNI state, kube-proxy/service routing problems, disk failure, or the control-plane being unavailable.
+
+This led to a clearer future architecture plan:
+
+```text
+Short term:
+  1 Talos node for learning and simple workloads
+
+Next practical step:
+  2-node mini rack
+  - node1: control-plane + light workloads
+  - node2: worker workloads
+
+Best HA learning shape:
+  3 small nodes
+  - all control-plane + worker
+  - etcd quorum can survive one node failure
+```
+
+Other lessons from this session:
+
+- `Completed` pods are usually successful run-to-completion pods, often from Jobs or one-off diagnostics.
+- Completed pods can be cleaned with:
+
+```bash
+kubectl delete pod -A --field-selector=status.phase=Succeeded
+```
+
+- Use Deployments/StatefulSets/DaemonSets instead of naked Pods for real workloads.
+- Most current homelab apps are already managed by controllers.
+- `www.danieljcheung.com` and `danieljcheung.com` should both route through the same Cloudflare Tunnel target.
+- If one Cloudflare hostname fails but the internal Kubernetes Service works for both Host headers, suspect Cloudflare DNS/tunnel/edge propagation before changing nginx.
+
+A separate concise notes page was added at:
+
+```text
+docs/10-kubernetes-operations-lessons.md
+```

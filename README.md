@@ -17,9 +17,9 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Private Argo CD access configured over Tailscale  
 ✅ Headlamp dashboard installed and exposed privately over Tailscale  
 ✅ Personal website deployed through GitOps-managed nginx  
-✅ Cloudflare Tunnel serving `danieljcheung.com` without router port forwarding  
-⚠️ `www.danieljcheung.com` still needs DNS/tunnel hostname cleanup  
-⏭️ Next: fix `www`, then deploy n8n + Postgres through GitOps
+✅ Cloudflare Tunnel serving `danieljcheung.com` and `www.danieljcheung.com` without router port forwarding
+✅ First real Kubernetes incident documented with operations lessons
+⏭️ Next: pin/harden Cloudflare Tunnel, then deploy n8n + Postgres through GitOps
 
 ## Hardware
 
@@ -95,6 +95,7 @@ High-level process:
 - [Private Access with Tailscale](docs/07-tailscale-private-access.md)
 - [Kubernetes Dashboards](docs/08-kubernetes-dashboards.md)
 - [Personal Website and Cloudflare Tunnel](docs/09-personal-site-cloudflare.md)
+- [Kubernetes Operations Lessons](docs/10-kubernetes-operations-lessons.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
@@ -117,7 +118,6 @@ High-level process:
 
 ## Next Steps
 
-- Fix `www.danieljcheung.com` Cloudflare hostname/DNS routing
 - Pin and harden the `cloudflared` deployment
 - Deploy n8n and Postgres through GitOps
 - Add backup/restore workflows for persistent data
