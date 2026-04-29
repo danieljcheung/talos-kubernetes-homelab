@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: nginx
+      annotations:
+        site-version: "2026-04-29-project-links"
     spec:
       volumes:
         - name: landing-page
