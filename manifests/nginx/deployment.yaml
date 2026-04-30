@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
       annotations:
-        site-version: "2026-04-30-hosting-accent"
+        site-version: "2026-04-30-hosting-footer"
     spec:
       volumes:
         - name: landing-page
