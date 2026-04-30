@@ -41,8 +41,7 @@ data:
             <li><a href="https://www.credly.com/badges/e7405b8a-539b-41c0-af64-8bef0f9b8d7a/public_url" target="_blank" rel="noreferrer" aria-label="AWS Certified Cloud Practitioner">[[AWS Certified Cloud Practitioner]]</a></li>
           </ul>
 
-          <h2>hosting</h2>
-          <p>This site is served from my Talos Kubernetes homelab through nginx, Argo CD GitOps, and Cloudflare Tunnel.</p>
+          <p class="host-note">served from my Talos Kubernetes homelab · nginx / Argo CD / Cloudflare Tunnel</p>
 
           <h2>contact</h2>
           <p>
@@ -166,6 +165,16 @@ data:
       color: #3f4e98;
       border-bottom-color: rgba(63, 78, 152, 0.75);
       outline: none;
+    }
+
+
+    .host-note {
+      margin-top: 0.65rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: -0.01em;
+      opacity: 0.78;
     }
 
     .project-link {
