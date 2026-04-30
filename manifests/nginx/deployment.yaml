@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
       annotations:
-        site-version: "2026-04-29-project-links"
+        site-version: "2026-04-30-resume-link"
     spec:
       volumes:
         - name: landing-page
@@ -32,3 +32,6 @@ spec:
             - name: landing-page
               mountPath: /usr/share/nginx/html/styles.css
               subPath: styles.css
+            - name: landing-page
+              mountPath: /usr/share/nginx/html/Daniel_Cheung_Resume.pdf
+              subPath: Daniel_Cheung_Resume.pdf
