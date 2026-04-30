@@ -33,5 +33,5 @@ spec:
               mountPath: /usr/share/nginx/html/styles.css
               subPath: styles.css
             - name: landing-page
-              mountPath: /usr/share/nginx/html/Daniel_Cheung_Resume.pdf
-              subPath: Daniel_Cheung_Resume.pdf
+              mountPath: /usr/share/nginx/html/Daniel_Cheung_Resume_2026-04-30.pdf
+              subPath: Daniel_Cheung_Resume_2026-04-30.pdf
