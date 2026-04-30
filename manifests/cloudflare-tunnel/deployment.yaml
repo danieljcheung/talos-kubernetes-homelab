@@ -6,7 +6,7 @@ metadata:
   labels:
     app: cloudflared
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: cloudflared
@@ -21,6 +21,8 @@ spec:
           args:
             - tunnel
             - --no-autoupdate
+            - --protocol
+            - http2
             - run
             - --token
             - $(TUNNEL_TOKEN)
@@ -40,3 +42,9 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault

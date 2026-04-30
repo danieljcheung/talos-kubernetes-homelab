@@ -658,3 +658,38 @@ Detailed notes were added at:
 ```text
 docs/11-observability-stack.md
 ```
+
+
+## Phase 18 — Private Grafana Access and Cloudflare Tunnel Reliability
+
+I exposed Grafana privately over Tailscale so the monitoring dashboard is reachable from trusted devices without making it public.
+
+The private admin surface now includes:
+
+```text
+Argo CD  -> https://argocd.tail2be9f6.ts.net
+Headlamp -> https://headlamp.tail2be9f6.ts.net
+Grafana  -> https://grafana.tail2be9f6.ts.net
+```
+
+I also added my final resume PDF to the Kubernetes-hosted nginx site and linked it from the contact section. The file is served directly by nginx from the same GitOps-managed ConfigMap-backed site.
+
+After that, I hit intermittent Cloudflare bad gateway / host errors from different devices. The important diagnostic result was that nginx and the Kubernetes Service were healthy inside the cluster while external requests through Cloudflare intermittently returned 502s after several seconds.
+
+That narrowed the issue to the Cloudflare Tunnel path rather than the nginx app itself:
+
+```text
+Cloudflare edge -> cloudflared connector -> Kubernetes DNS/service -> nginx
+```
+
+To improve reliability, I changed the tunnel deployment to:
+
+- run two `cloudflared` replicas instead of one
+- force `cloudflared` to use HTTP/2 transport instead of QUIC
+- add stricter container security settings:
+  - drop all Linux capabilities
+  - use the runtime default seccomp profile
+  - run as non-root
+
+The lesson: replicas help with connector availability, but Cloudflare Tunnel still has external edge/network behavior that can fail even when the cluster is healthy. If this continues, the next serious architecture step is a small VPS public edge with WireGuard or Tailscale back to the homelab.
+

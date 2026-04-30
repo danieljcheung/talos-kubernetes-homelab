@@ -10,8 +10,11 @@ This phase publishes Daniel's personal website from the Talos Kubernetes homelab
 - nginx now serves the personal site from a ConfigMap containing:
   - `index.html`
   - `styles.css`
+  - `Daniel_Cheung_Final_Resume.pdf`
 - The nginx Service is `ClusterIP`, not `NodePort`, so it is only reachable inside the cluster unless accessed through a controlled path.
 - Cloudflare Tunnel is being used for public access without router port forwarding.
+- The tunnel now runs two `cloudflared` replicas for connector redundancy.
+- `cloudflared` is pinned to HTTP/2 transport instead of QUIC after intermittent Cloudflare 502/host errors appeared while nginx and the in-cluster Service were healthy.
 - `https://danieljcheung.com` works.
 - `https://www.danieljcheung.com` works after adding the matching Cloudflare Tunnel public hostname and allowing edge/config propagation.
 
@@ -115,7 +118,7 @@ It is production-minded, but not fully production-grade yet.
 To make this more production-grade:
 
 - pin `cloudflare/cloudflared` to a specific version instead of `latest`
-- run at least two `cloudflared` replicas if availability matters
+- keep at least two `cloudflared` replicas if availability matters
 - add readiness/liveness probes
 - add NetworkPolicies
 - add monitoring and alerting
