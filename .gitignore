@@ -12,3 +12,8 @@ worker.yaml
 local/
 manifests/monitoring/telegram-alertmanagerconfig.yaml
 manifests/monitoring/public-site-alerts.yaml
+
+# Local SOPS / age keys
+age-key.txt
+keys.txt
+*.agekey

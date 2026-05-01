@@ -1,0 +1,4 @@
+creation_rules:
+  - path_regex: manifests/.*/.*\.secret\.ya?ml$
+    encrypted_regex: '^(data|stringData)$'
+    age: age1vk7c2yw7dmmk62vwpns5m8z0ljujkf9xv8ad8ml5qxp97l7mlatq0mq9lf
