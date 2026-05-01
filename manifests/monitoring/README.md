@@ -7,7 +7,8 @@ Helm values for the homelab observability stack.
 - `kube-prometheus-stack-values.yaml` — Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics
 - `loki-values.yaml` — single-binary Loki for log storage/querying
 - `alloy-values.yaml` — Grafana Alloy DaemonSet for Kubernetes log collection
-- `homelab-alerts.yaml` — first custom Prometheus rules for pod restarts and nginx availability
+- `homelab-alerts.yaml` — first custom Prometheus rules for pod restarts, nginx availability, and Cloudflare Tunnel availability
+- `telegram-alertmanagerconfig.example.yaml` — template for the Alertmanager Telegram route/receiver; copy to `telegram-alertmanagerconfig.yaml`, set the numeric chat ID locally, and create the `alertmanager-telegram` Secret
 
 ## Install / Upgrade
 
@@ -68,5 +69,14 @@ Current rules:
 
 - `PodRestartingFrequently`
 - `NginxSitePodDown`
+- `CloudflaredDown`
 
-Notification delivery is intended to be configured through Grafana Alerting contact points and notification policies.
+Notification delivery is configured through Alertmanager-native Telegram routing. Create or update the bot-token secret with:
+
+```bash
+kubectl -n monitoring create secret generic alertmanager-telegram \
+  --from-literal=bot-token='YOUR_BOT_TOKEN' \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+The kube-prometheus-stack values set `alertmanagerConfigMatcherStrategy.type: None` so alerts from namespaces such as `default` and `cloudflare` can match the Telegram route instead of falling through to the default null receiver.

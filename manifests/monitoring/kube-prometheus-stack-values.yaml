@@ -18,6 +18,8 @@ prometheus:
 alertmanager:
   enabled: true
   alertmanagerSpec:
+    alertmanagerConfigMatcherStrategy:
+      type: None
     resources:
       requests:
         cpu: 25m

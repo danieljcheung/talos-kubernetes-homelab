@@ -713,3 +713,19 @@ I decided not to rely on a `probe_success` public-site alert yet because that re
 
 The notification direction is Grafana Alerting contact points and notification policies rather than raw ntfy webhooks. This keeps alert routing easier to manage from the private Grafana UI.
 
+
+## Phase 20 — Alertmanager Telegram Routing
+
+I configured Alertmanager-native Telegram notification routing for the homelab alerts.
+
+The key fix was setting the kube-prometheus-stack Alertmanager matcher strategy to `None`:
+
+```yaml
+alertmanagerConfigMatcherStrategy:
+  type: None
+```
+
+By default, AlertmanagerConfig routes are namespace-scoped. The generated Telegram route originally only matched alerts with `namespace="monitoring"`, so alerts for the nginx site in `default` or cloudflared in `cloudflare` fell through to the default `null` receiver.
+
+After changing the matcher strategy and upgrading the Helm release, the generated Alertmanager route no longer includes the unwanted `namespace="monitoring"` matcher. This keeps the PrometheusRule -> Prometheus -> Alertmanager path GitOps-native while still sending notifications to Telegram.
+

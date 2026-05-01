@@ -228,7 +228,16 @@ kubectl apply -f manifests/monitoring/homelab-alerts.yaml
 kubectl -n monitoring get prometheusrule homelab-alerts
 ```
 
-Grafana Alerting is the preferred notification path for now. Alertmanager receives the Prometheus alerts, and Grafana can be used to configure contact points and notification policies through the private Tailscale UI.
+Alert delivery is configured through Alertmanager-native Telegram routing. The Telegram bot token is stored in the `alertmanager-telegram` Secret and the route is defined in `manifests/monitoring/telegram-alertmanagerconfig.example.yaml`.
+
+Because AlertmanagerConfig objects normally add a namespace matcher by default, `kube-prometheus-stack-values.yaml` sets:
+
+```yaml
+alertmanagerConfigMatcherStrategy:
+  type: None
+```
+
+Without that setting, alerts outside the `monitoring` namespace would miss the Telegram route and fall through to the default `null` receiver.
 
 A draft public-site probe alert exists locally only if blackbox-exporter is added later. Do not rely on `probe_success` rules until blackbox-exporter is installed and scraping `danieljcheung.com`.
 
@@ -260,15 +269,15 @@ Known gaps:
 - Grafana is now exposed privately over Tailscale; the admin password still needs hardening
 - Loki persistence is disabled
 - no backup/restore workflow for observability data
-- notification policies/contact points still need to be finalized in Grafana Alerting
+- Telegram bot token should be rotated if it is ever exposed during troubleshooting
 - control-plane metrics for Talos etcd/controller-manager/scheduler are disabled for now
 - monitoring is installed by Helm commands, not fully managed by Argo CD yet
 
 ## Next Steps
 
 1. Replace Grafana admin password with a Kubernetes Secret.
-2. Configure Grafana contact points and notification policies.
-3. Add blackbox-exporter for external uptime checks of `danieljcheung.com`.
+2. Add blackbox-exporter for external uptime checks of `danieljcheung.com`.
+3. Add more Alertmanager routes or receivers if Telegram is not enough.
 4. Add alerts for node down, disk pressure, Cloudflare Tunnel health, and public site downtime.
 5. Decide on storage/backups before enabling persistent Loki.
 6. Move monitoring management fully into GitOps with Argo CD.

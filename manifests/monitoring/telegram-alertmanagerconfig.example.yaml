@@ -1,0 +1,32 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: telegram-alerts
+  namespace: monitoring
+spec:
+  route:
+    receiver: telegram
+    groupBy:
+      - namespace
+      - alertname
+    groupWait: 30s
+    groupInterval: 5m
+    repeatInterval: 4h
+  receivers:
+    - name: telegram
+      telegramConfigs:
+        - botToken:
+            name: alertmanager-telegram
+            key: bot-token
+          # Replace with your numeric Telegram chat ID before applying.
+          # Use a negative number for groups/supergroups if Telegram returns one.
+          chatID: 0
+          sendResolved: true
+          parseMode: HTML
+          message: |
+            <b>{{ .Status | toUpper }}</b> {{ .CommonLabels.alertname }}
+
+            {{ range .Alerts }}
+            <b>{{ .Labels.severity }}</b>: {{ .Annotations.summary }}
+            {{ .Annotations.description }}
+            {{ end }}

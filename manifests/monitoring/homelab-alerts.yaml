@@ -26,3 +26,12 @@ spec:
           annotations:
             summary: "Personal site nginx pod is down"
             description: "The nginx deployment serving danieljcheung.com has no available replicas."
+
+        - alert: CloudflaredDown
+          expr: kube_deployment_status_replicas_available{namespace="cloudflare", deployment="cloudflared"} < 1
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Cloudflare Tunnel is down"
+            description: "The cloudflared deployment has no available replicas. Public site access is likely down."
