@@ -98,6 +98,7 @@ High-level process:
 - [Personal Website and Cloudflare Tunnel](docs/09-personal-site-cloudflare.md)
 - [Kubernetes Operations Lessons](docs/10-kubernetes-operations-lessons.md)
 - [Observability Stack](docs/11-observability-stack.md)
+- [SOPS Secrets Workflow](docs/12-sops-secrets-workflow.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
