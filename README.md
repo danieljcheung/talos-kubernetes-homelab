@@ -34,26 +34,53 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 
 ## Architecture
 
-```text
-MacBook / Admin Machine
-        |
-        | talosctl / kubectl / GitOps
-        v
-+-----------------------------+
-| Homelab Node                |
-| Intel i5-8500T              |
-| 16GB RAM / 256GB SSD        |
-| Talos Linux                 |
-| Single-node Kubernetes      |
-+-----------------------------+
-        |
-        +-- Core Kubernetes services
-        +-- Personal website via nginx
-        +-- Cloudflare Tunnel for public site traffic
-        +-- GitOps with Argo CD
-        +-- Monitoring stack
-        +-- Security lab workloads
+```mermaid
+flowchart TB
+  dan["Dan's Devices<br/>MacBook · PC · Phone"]
+  github["GitHub<br/>GitOps Repository"]
+  cloudflare["Cloudflare<br/>DNS + Tunnel"]
+  tailscale["Tailscale<br/>Private Mesh"]
+  telegram["Telegram<br/>Alert Delivery"]
+
+  subgraph cluster["Talos Kubernetes Homelab"]
+    direction TB
+    argocd["Argo CD<br/>GitOps"]
+    site["nginx Personal Site<br/>danieljcheung.com"]
+    tunnel["cloudflared<br/>Public tunnel connector"]
+    dashboards["Private Dashboards<br/>Grafana · Headlamp · Longhorn"]
+    monitoring["Observability<br/>Prometheus · Loki · Alloy · Alertmanager"]
+    storage["Longhorn<br/>Persistent Volumes"]
+    secrets["SOPS<br/>Encrypted secrets in Git"]
+
+    argocd --> site
+    tunnel --> site
+    monitoring --> dashboards
+    storage --> site
+  end
+
+  dan -->|kubectl / talosctl| cluster
+  github -->|desired state| argocd
+  cloudflare -->|public HTTPS| tunnel
+  tailscale -->|private HTTPS| dashboards
+  monitoring -->|alerts| telegram
+  secrets -. decrypt/apply .-> cluster
+
+  classDef external fill:#eef2ff,stroke:#4f46e5,color:#111827
+  classDef user fill:#ecfeff,stroke:#0891b2,color:#111827
+  classDef platform fill:#f0fdf4,stroke:#16a34a,color:#111827
+  classDef workload fill:#fff7ed,stroke:#ea580c,color:#111827
+  classDef ops fill:#fdf2f8,stroke:#db2777,color:#111827
+  classDef storageClass fill:#fefce8,stroke:#ca8a04,color:#111827
+
+  class github,cloudflare,tailscale,telegram external
+  class dan user
+  class argocd,dashboards,secrets platform
+  class site,tunnel workload
+  class monitoring ops
+  class storage storageClass
 ```
+
+See [Architecture](docs/14-architecture.md) for the larger system context and cluster container view.
 
 ## Why Talos?
 
@@ -102,6 +129,7 @@ High-level process:
 - [Observability Stack](docs/11-observability-stack.md)
 - [SOPS Secrets Workflow](docs/12-sops-secrets-workflow.md)
 - [Longhorn Storage](docs/13-longhorn-storage.md)
+- [Architecture](docs/14-architecture.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
@@ -121,6 +149,9 @@ High-level process:
 - Kubernetes dashboard operations with Headlamp
 - Static website hosting on Kubernetes
 - Cloudflare Tunnel public access without port forwarding
+- Kubernetes persistent storage with Longhorn
+- SOPS-based encrypted secret management
+- Architecture documentation with Mermaid diagrams
 - Security-aware system design
 
 ## Next Steps
