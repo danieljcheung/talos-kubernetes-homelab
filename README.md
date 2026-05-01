@@ -20,7 +20,9 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Cloudflare Tunnel serving `danieljcheung.com` and `www.danieljcheung.com` without router port forwarding
 ✅ First real Kubernetes incident documented with operations lessons
 ✅ Observability stack installed: Prometheus, Grafana, Alertmanager, Loki, and Alloy
-⏭️ Next: expose Grafana privately over Tailscale, configure alerts, then add storage/backups
+✅ SOPS workflow added for encrypted Git-tracked secrets
+✅ Longhorn installed for Kubernetes-native persistent storage
+⏭️ Next: expose Longhorn privately over Tailscale, then configure storage backups
 
 ## Hardware
 
@@ -99,6 +101,7 @@ High-level process:
 - [Kubernetes Operations Lessons](docs/10-kubernetes-operations-lessons.md)
 - [Observability Stack](docs/11-observability-stack.md)
 - [SOPS Secrets Workflow](docs/12-sops-secrets-workflow.md)
+- [Longhorn Storage](docs/13-longhorn-storage.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)
@@ -124,6 +127,7 @@ High-level process:
 
 - Pin and harden the `cloudflared` deployment
 - Deploy n8n and Postgres through GitOps
-- Add backup/restore workflows for persistent data
+- Add backup/restore workflows for persistent Longhorn data
+- Expose Longhorn UI privately over Tailscale
 - Configure Alertmanager routes and production-grade alerting
 - Deploy security-focused workloads for experimentation
