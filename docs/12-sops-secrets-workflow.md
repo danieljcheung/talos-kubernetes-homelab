@@ -151,13 +151,39 @@ Clean up the test Secret from the cluster:
 kubectl delete secret dummy-sops-secret -n default
 ```
 
+## Secret Inventory
+
+These are the real homelab secrets currently handled with SOPS.
+
+| Purpose | Kubernetes object | Namespace | Key / sensitive field | Encrypted file | Apply command |
+| --- | --- | --- | --- | --- | --- |
+| Telegram Alertmanager bot token | `Secret/alertmanager-telegram` | `monitoring` | `stringData.bot-token` | `manifests/monitoring/alertmanager-telegram.secret.yaml` | `sops --decrypt manifests/monitoring/alertmanager-telegram.secret.yaml \| kubectl apply -f -` |
+| Cloudflare Tunnel token | `Secret/cloudflare-tunnel-token` | `cloudflare` | `stringData.token` | `manifests/cloudflare-tunnel/cloudflare-tunnel-token.secret.yaml` | `sops --decrypt manifests/cloudflare-tunnel/cloudflare-tunnel-token.secret.yaml \| kubectl apply -f -` |
+
+### Local-only / not committed
+
+`manifests/monitoring/telegram-alertmanagerconfig.secret.yaml` is currently local-only because the Telegram `chatID` is not covered by the current SOPS rule. The bot token is already encrypted separately in `alertmanager-telegram.secret.yaml`.
+
+If I want to commit the AlertmanagerConfig later, I should either:
+
+1. accept that `chatID` is public-ish metadata and commit it intentionally, or
+2. update `.sops.yaml` to also encrypt `chatID` before committing it.
+
 ## Current Scope
 
 This setup gives me encrypted secrets in Git and manual local application.
 
+Current model:
+
+```text
+Argo CD manages non-secret manifests.
+SOPS-encrypted Secret files live in Git.
+I decrypt/apply real Secrets manually from my Mac.
+```
+
 Future improvements:
 
-- add real secrets like Telegram or Cloudflare as encrypted `.secret.yaml` files
+- add more real secrets as encrypted `.secret.yaml` files when services need them
 - document each required secret next to its app
 - later integrate SOPS with Argo CD so encrypted secrets can sync automatically
 - eventually consider Kubernetes encryption-at-rest for live Secret data
