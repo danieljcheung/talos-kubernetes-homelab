@@ -7,3 +7,8 @@ worker.yaml
 
 # macOS
 .DS_Store
+
+# Local-only Kubernetes manifests / secrets
+local/
+manifests/monitoring/telegram-alertmanagerconfig.yaml
+manifests/monitoring/public-site-alerts.yaml
