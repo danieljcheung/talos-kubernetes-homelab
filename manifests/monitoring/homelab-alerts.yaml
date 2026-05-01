@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: homelab-alerts
+  namespace: monitoring
+  labels:
+    release: monitoring
+spec:
+  groups:
+    - name: homelab.rules
+      rules:
+        - alert: PodRestartingFrequently
+          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod is restarting frequently"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted more than 3 times in 15 minutes."
+
+        - alert: NginxSitePodDown
+          expr: kube_deployment_status_replicas_available{namespace="default", deployment="nginx"} < 1
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Personal site nginx pod is down"
+            description: "The nginx deployment serving danieljcheung.com has no available replicas."

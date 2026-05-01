@@ -7,6 +7,7 @@ Helm values for the homelab observability stack.
 - `kube-prometheus-stack-values.yaml` — Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics
 - `loki-values.yaml` — single-binary Loki for log storage/querying
 - `alloy-values.yaml` — Grafana Alloy DaemonSet for Kubernetes log collection
+- `homelab-alerts.yaml` — first custom Prometheus rules for pod restarts and nginx availability
 
 ## Install / Upgrade
 
@@ -52,3 +53,20 @@ http://localhost:3000
 ```
 
 Initial login is currently `admin / admin`; replace with a proper secret before hardening.
+
+
+## Custom Alerts
+
+Apply the custom homelab alert rules with:
+
+```bash
+kubectl apply -f manifests/monitoring/homelab-alerts.yaml
+kubectl -n monitoring get prometheusrule homelab-alerts
+```
+
+Current rules:
+
+- `PodRestartingFrequently`
+- `NginxSitePodDown`
+
+Notification delivery is intended to be configured through Grafana Alerting contact points and notification policies.

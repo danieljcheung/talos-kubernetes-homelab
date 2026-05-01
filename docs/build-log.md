@@ -693,3 +693,23 @@ To improve reliability, I changed the tunnel deployment to:
 
 The lesson: replicas help with connector availability, but Cloudflare Tunnel still has external edge/network behavior that can fail even when the cluster is healthy. If this continues, the next serious architecture step is a small VPS public edge with WireGuard or Tailscale back to the homelab.
 
+
+## Phase 19 — First Custom Alerts
+
+I added the first custom Prometheus rules for the homelab.
+
+The rules live in:
+
+```text
+manifests/monitoring/homelab-alerts.yaml
+```
+
+The first two alerts are intentionally simple and practical:
+
+- `PodRestartingFrequently` — warns when a pod restarts more than 3 times in 15 minutes.
+- `NginxSitePodDown` — fires as critical if the nginx deployment serving my personal website has no available replicas for 2 minutes.
+
+I decided not to rely on a `probe_success` public-site alert yet because that requires blackbox-exporter or another external probe source. The better order is to first route Kubernetes-native alerts through Grafana Alerting, then add blackbox-exporter for true external uptime monitoring.
+
+The notification direction is Grafana Alerting contact points and notification policies rather than raw ntfy webhooks. This keeps alert routing easier to manage from the private Grafana UI.
+

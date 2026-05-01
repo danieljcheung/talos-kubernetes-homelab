@@ -89,7 +89,13 @@ Important pieces:
 - **kube-state-metrics** — Kubernetes object state metrics
 - **Prometheus Operator** — manages Prometheus CRDs such as `ServiceMonitor`
 
-Local Grafana access:
+Grafana is exposed privately over Tailscale, not publicly:
+
+```text
+https://grafana.tail2be9f6.ts.net
+```
+
+Local port-forward access still works as a fallback:
 
 ```bash
 kubectl -n monitoring port-forward svc/monitoring-grafana 3000:80
@@ -201,6 +207,31 @@ kubectl -n monitoring get pods | grep alloy
 kubectl -n monitoring logs -l app.kubernetes.io/name=alloy --all-containers --tail=100
 ```
 
+
+## Custom Homelab Alerts
+
+The first custom Prometheus rules are stored in Git at:
+
+```text
+manifests/monitoring/homelab-alerts.yaml
+```
+
+Current custom alerts:
+
+- `PodRestartingFrequently` — warning when a pod restarts more than 3 times in 15 minutes.
+- `NginxSitePodDown` — critical when the nginx deployment serving `danieljcheung.com` has no available replicas for 2 minutes.
+
+Apply or update the rules with:
+
+```bash
+kubectl apply -f manifests/monitoring/homelab-alerts.yaml
+kubectl -n monitoring get prometheusrule homelab-alerts
+```
+
+Grafana Alerting is the preferred notification path for now. Alertmanager receives the Prometheus alerts, and Grafana can be used to configure contact points and notification policies through the private Tailscale UI.
+
+A draft public-site probe alert exists locally only if blackbox-exporter is added later. Do not rely on `probe_success` rules until blackbox-exporter is installed and scraping `danieljcheung.com`.
+
 ## Useful Queries
 
 Grafana Explore with Loki:
@@ -226,18 +257,18 @@ This is a strong learning-grade observability stack, but not production-grade ye
 Known gaps:
 
 - Grafana password is still simple/initial
-- Grafana is accessed by port-forward, not private Tailscale ingress yet
+- Grafana is now exposed privately over Tailscale; the admin password still needs hardening
 - Loki persistence is disabled
 - no backup/restore workflow for observability data
-- Alertmanager routes are not configured yet
+- notification policies/contact points still need to be finalized in Grafana Alerting
 - control-plane metrics for Talos etcd/controller-manager/scheduler are disabled for now
 - monitoring is installed by Helm commands, not fully managed by Argo CD yet
 
 ## Next Steps
 
-1. Expose Grafana privately through Tailscale.
-2. Replace Grafana admin password with a Kubernetes Secret.
-3. Add Alertmanager routes for useful notifications.
-4. Add alerts for node down, crashlooping pods, disk pressure, and public site downtime.
+1. Replace Grafana admin password with a Kubernetes Secret.
+2. Configure Grafana contact points and notification policies.
+3. Add blackbox-exporter for external uptime checks of `danieljcheung.com`.
+4. Add alerts for node down, disk pressure, Cloudflare Tunnel health, and public site downtime.
 5. Decide on storage/backups before enabling persistent Loki.
 6. Move monitoring management fully into GitOps with Argo CD.
