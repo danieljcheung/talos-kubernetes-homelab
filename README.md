@@ -1,6 +1,6 @@
 # Talos Kubernetes Homelab
 
-This repository documents my bare-metal Kubernetes homelab built with **Talos Linux** on a small form factor PC.
+This repository documents my bare-metal Kubernetes homelab built with **Talos Linux** on small form factor PCs.
 
 The goal of this project is to learn Kubernetes and platform engineering by running a real cluster on real hardware, not just local containers or cloud tutorials. I chose Talos Linux because it is purpose-built for Kubernetes, immutable, API-managed, and closer to modern production infrastructure than a traditional Ubuntu server install.
 
@@ -9,7 +9,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Hardware acquired  
 ✅ Talos Linux booted from USB  
 ✅ Talos installed to the internal SSD  
-✅ Single-node Kubernetes cluster bootstrapped  
+✅ Kubernetes cluster bootstrapped  
+✅ Second Talos node added as a worker  
 ✅ First nginx workload deployed and exposed with NodePort  
 ✅ Public GitHub repository published  
 ✅ Argo CD installed inside the cluster  
@@ -26,11 +27,19 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 
 ## Hardware
 
-- **Machine:** Mini PC / small form factor homelab node
-- **CPU:** Intel Core i5-8500T
-- **RAM:** 16GB
-- **Storage:** 256GB SSD
-- **Network:** Ethernet
+- **Control plane:** `desktop-j7rbie4`
+  - Intel Core i5-8500T
+  - 16GB RAM
+  - 256GB SSD
+  - Ethernet
+- **Worker:** `desktop-bvomtdn`
+  - Dell OptiPlex 3070-class small form factor node
+  - Intel Core i5 9th gen
+  - 16GB RAM
+  - 256GB SSD
+  - Ethernet
+
+In `kubectl get nodes`, the worker appears with role `<none>`. That is normal Kubernetes behavior; only the control-plane node receives the `control-plane` role label.
 
 ## Architecture
 
@@ -98,7 +107,7 @@ Talos is different from a normal Linux server:
 
 ## Setup Journey
 
-The machine arrived with Windows preinstalled, so the first major step was wiping the internal drive and replacing it with Talos Linux.
+The first machine arrived with Windows preinstalled, so the first major step was wiping the internal drive and replacing it with Talos Linux. The second node was later added as a dedicated worker using the original cluster's worker machine config.
 
 High-level process:
 

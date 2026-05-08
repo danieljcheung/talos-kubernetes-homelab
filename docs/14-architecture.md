@@ -12,7 +12,7 @@ flowchart TB
   tailscale["Tailscale<br/>Private Mesh"]
   telegram["Telegram<br/>Alert Delivery"]
 
-  homelab["Talos Kubernetes Homelab<br/>Bare-metal mini PC · i5-8500T · 16GB RAM"]
+  homelab["Talos Kubernetes Homelab<br/>2 bare-metal SFF nodes<br/>1 control plane · 1 worker"]
 
   dan -->|kubectl / talosctl| homelab
   dan -->|private dashboard access| tailscale
@@ -41,6 +41,12 @@ flowchart TB
 
   subgraph cluster["Talos Kubernetes Homelab"]
     direction TB
+
+    subgraph nodes["Physical Nodes"]
+      direction LR
+      cp["desktop-j7rbie4<br/>control plane"]
+      worker["desktop-bvomtdn<br/>worker"]
+    end
 
     subgraph gitops["GitOps + Workloads"]
       direction LR
@@ -110,4 +116,5 @@ flowchart TB
 - Public traffic only reaches the personal site through Cloudflare Tunnel.
 - Admin dashboards stay private through Tailscale ingress.
 - Secrets are encrypted in Git with SOPS and applied from the trusted admin machine for now.
-- Longhorn provides persistent volumes, but the current single-node setup is not highly available until more nodes are added.
+- Longhorn provides persistent volumes, but the current two-node setup is still not a fully highly available storage/control-plane design.
+- The cluster currently uses one control-plane node and one worker node. This is cleaner than two control-plane nodes because etcd HA should use three control-plane members.

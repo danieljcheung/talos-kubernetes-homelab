@@ -729,3 +729,44 @@ By default, AlertmanagerConfig routes are namespace-scoped. The generated Telegr
 
 After changing the matcher strategy and upgrading the Helm release, the generated Alertmanager route no longer includes the unwanted `namespace="monitoring"` matcher. This keeps the PrometheusRule -> Prometheus -> Alertmanager path GitOps-native while still sending notifications to Telegram.
 
+
+
+## Phase 21 — Adding a Second Talos Node
+
+I added a second physical machine to the Talos Kubernetes homelab and joined it to the existing cluster as a worker node.
+
+Final intended node layout:
+
+```text
+desktop-j7rbie4   Ready   control-plane
+desktop-bvomtdn   Ready   <none>
+```
+
+In Kubernetes, a normal worker often shows role `<none>` in `kubectl get nodes`. That is expected; the `control-plane` role appears because it is explicitly labeled on control-plane nodes.
+
+The important setup lesson was to reuse the original Talos cluster bundle instead of generating a brand-new one. A second node needs the `worker.yaml` from the same cluster generation/secrets as the existing control plane. Applying a newly generated config creates a different cluster identity and will not join the original cluster correctly.
+
+Useful commands from this step:
+
+```bash
+# Apply the worker config from the original cluster bundle
+talosctl apply-config --insecure \
+  --nodes <node2-ip> \
+  --file ~/worker.yaml
+
+# Confirm node roles and status
+kubectl get nodes -o wide
+
+# See what is running where
+kubectl get pods -A -o wide
+```
+
+Operational notes:
+
+- For a two-node homelab, one control plane plus one worker is simpler and safer than two control planes.
+- Two control-plane nodes are not real high availability because etcd quorum would require both nodes to stay online.
+- Existing pods do not automatically rebalance onto a new worker. They usually stay where they are until recreated, rescheduled, or rolled out again.
+- DaemonSets intentionally run one pod per matching node, so those pods should appear on both nodes.
+- If Talos boots into maintenance mode after install, it usually means the node booted Talos but does not yet have a machine config applied.
+- If a reboot returns to Windows, Talos was likely running from the USB/live environment or the BIOS boot order was still pointing at the wrong boot target.
+
