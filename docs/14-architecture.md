@@ -11,6 +11,7 @@ flowchart TB
   cloudflare["Cloudflare<br/>DNS + Tunnel"]
   tailscale["Tailscale<br/>Private Mesh"]
   telegram["Telegram<br/>Alert Delivery"]
+  s3["AWS S3<br/>Longhorn Backups"]
 
   homelab["Talos Kubernetes Homelab<br/>2 bare-metal SFF nodes<br/>1 control plane · 1 worker"]
 
@@ -20,12 +21,13 @@ flowchart TB
   cloudflare -->|public site traffic| homelab
   tailscale -->|private HTTPS ingress| homelab
   homelab -->|alerts| telegram
+  homelab -->|volume backups| s3
 
   classDef external fill:#eef2ff,stroke:#4f46e5,color:#111827
   classDef user fill:#ecfeff,stroke:#0891b2,color:#111827
   classDef cluster fill:#f0fdf4,stroke:#16a34a,color:#111827
 
-  class github,cloudflare,tailscale,telegram external
+  class github,cloudflare,tailscale,telegram,s3 external
   class dan user
   class homelab cluster
 ```
@@ -38,6 +40,7 @@ flowchart TB
   cloudflare["Cloudflare Edge"]
   tailscale["Tailscale Mesh"]
   telegram["Telegram"]
+  s3["AWS S3<br/>Longhorn Backups"]
 
   subgraph cluster["Talos Kubernetes Homelab"]
     direction TB
@@ -94,6 +97,7 @@ flowchart TB
   tsIngress --> headlamp
   tsIngress --> longhorn
   alertmanager -->|notifications| telegram
+  longhorn -->|external backups| s3
   sops -. decrypt/apply from admin Mac .-> cluster
 
   classDef external fill:#eef2ff,stroke:#4f46e5,color:#111827
@@ -103,7 +107,7 @@ flowchart TB
   classDef platform fill:#f0fdf4,stroke:#16a34a,color:#111827
   classDef storage fill:#fefce8,stroke:#ca8a04,color:#111827
 
-  class github,cloudflare,tailscale,telegram external
+  class github,cloudflare,tailscale,telegram,s3 external
   class argocd,nginx,future gitops
   class cloudflared,tsIngress access
   class alloy,loki,prometheus,grafana,alertmanager obs
@@ -116,5 +120,5 @@ flowchart TB
 - Public traffic only reaches the personal site through Cloudflare Tunnel.
 - Admin dashboards stay private through Tailscale ingress.
 - Secrets are encrypted in Git with SOPS and applied from the trusted admin machine for now.
-- Longhorn provides persistent volumes, but the current two-node setup is still not a fully highly available storage/control-plane design.
+- Longhorn provides persistent volumes and external AWS S3 backups, but the current two-node setup is still not a fully highly available storage/control-plane design.
 - The cluster currently uses one control-plane node and one worker node. This is cleaner than two control-plane nodes because etcd HA should use three control-plane members.

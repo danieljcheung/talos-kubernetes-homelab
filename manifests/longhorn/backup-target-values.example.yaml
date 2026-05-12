@@ -1,0 +1,14 @@
+# Example-only Longhorn BackupTarget manifest for AWS S3.
+# Copy this to local/ and replace placeholders before applying.
+# Do not commit real S3 keys, credential Secrets, bucket names, or private prefixes.
+# Longhorn v1.11 uses BackupTarget CRs; do not use legacy Setting CRs.
+---
+apiVersion: longhorn.io/v1beta2
+kind: BackupTarget
+metadata:
+  name: default
+  namespace: longhorn-system
+spec:
+  backupTargetURL: s3://<bucket-name>@<aws-region>/<optional-prefix>
+  credentialSecret: <longhorn-s3-credential-secret-name>
+  pollInterval: 300

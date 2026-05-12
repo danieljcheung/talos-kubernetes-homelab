@@ -23,7 +23,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Observability stack installed: Prometheus, Grafana, Alertmanager, Loki, and Alloy
 ✅ SOPS workflow added for encrypted Git-tracked secrets
 ✅ Longhorn installed for Kubernetes-native persistent storage
-⏭️ Next: expose Longhorn privately over Tailscale, then configure storage backups
+✅ Longhorn external backups configured to AWS S3 and restore-tested
+⏭️ Next: enable recurring Longhorn backup jobs for selected volumes
 
 ## Hardware
 
@@ -167,7 +168,7 @@ High-level process:
 
 - Pin and harden the `cloudflared` deployment
 - Deploy n8n and Postgres through GitOps
-- Add backup/restore workflows for persistent Longhorn data
-- Expose Longhorn UI privately over Tailscale
+- Enable recurring Longhorn backup jobs for selected volumes
+- Deploy and back up the first real stateful workload
 - Configure Alertmanager routes and production-grade alerting
 - Deploy security-focused workloads for experimentation

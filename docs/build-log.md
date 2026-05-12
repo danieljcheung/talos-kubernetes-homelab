@@ -770,3 +770,32 @@ Operational notes:
 - If Talos boots into maintenance mode after install, it usually means the node booted Talos but does not yet have a machine config applied.
 - If a reboot returns to Windows, Talos was likely running from the USB/live environment or the BIOS boot order was still pointing at the wrong boot target.
 
+## Phase 22 — Longhorn AWS S3 Backup and Restore Milestone
+
+The storage milestone moved from local persistent volumes to recoverable persistent volumes. Longhorn now has an external AWS S3 backup target and a completed restore test.
+
+What was configured:
+
+1. Created an AWS S3-backed Longhorn backup target.
+2. Stored credentials outside Git and referenced them from `longhorn-system`.
+3. Configured Longhorn v1.11 through `BackupTarget/default` instead of legacy `Setting` CRs.
+4. Created a backup of test PVC data.
+5. Restored the backup into Longhorn volume `long-horn-test-backup`.
+6. Mounted the restored volume through a Kubernetes PV/PVC.
+7. Verified marker `restore-test-20260512-202740` survived backup and restore.
+
+Important issue/fix:
+
+- Control plane `10.0.0.97` had Talos `siderolabs/iscsi-tools`, but worker `10.0.0.36` / `desktop-bvomtdn` initially did not.
+- Longhorn pre-upgrade checks failed until the worker was upgraded with the iSCSI-enabled Talos schematic.
+- Lesson: every schedulable Talos node needs the Longhorn storage prerequisites, not just the node where Longhorn was first installed.
+
+Repository artifacts for this milestone stay sanitized:
+
+```text
+manifests/longhorn/backup-target-values.example.yaml
+manifests/longhorn/recurring-jobs.example.yaml
+```
+
+This keeps the repo safe for a public portfolio while documenting the operational process an interviewer would expect: configure a target, prove recovery, record the result, and keep secrets out of Git.
+

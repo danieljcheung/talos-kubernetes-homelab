@@ -50,6 +50,8 @@ talosctl get extensions \
   --endpoints 10.0.0.97
 ```
 
+Operational issue encountered: the control-plane node `10.0.0.97` had `siderolabs/iscsi-tools`, but the worker node `10.0.0.36` / `desktop-bvomtdn` initially did not. Longhorn pre-upgrade checks failed until the worker was upgraded with the same iSCSI-enabled Talos schematic. Every schedulable node needs the extension before Longhorn can safely attach volumes there.
+
 ## Namespace Pod Security
 
 Longhorn needs privileged host access. Keep that scoped to the Longhorn namespace only:
@@ -236,6 +238,90 @@ hello-longhorn
 
 This confirms Longhorn can provision a PVC and persist data across pod replacement.
 
+
+## AWS S3 Backup Target
+
+Longhorn snapshots protect against some application mistakes, but they still live inside the cluster. The production-style storage milestone was to add an external backup target so PVC data can be recovered if a node, disk, or Longhorn volume is lost.
+
+This cluster now uses an AWS S3 backup target configured through Longhorn's `BackupTarget` custom resource:
+
+```text
+BackupTarget/default
+```
+
+Important Longhorn v1.11 note: backup target configuration is managed through the `BackupTarget` CR, not the older legacy `Setting` CRs. For this cluster, the working configuration was created by updating `BackupTarget/default` and referencing an S3 credential Secret in `longhorn-system`.
+
+Keep the following out of Git:
+
+- AWS access key ID and secret access key
+- real bucket names or private prefixes, if they should not be public
+- local values/manifests under `local/`
+
+A sanitized example backup target manifest lives at:
+
+```text
+manifests/longhorn/backup-target-values.example.yaml
+```
+
+Apply only after replacing placeholders in a local, uncommitted copy. The live cluster should show `BackupTarget/default` as available before relying on recurring backup jobs.
+
+Useful checks:
+
+```bash
+kubectl -n longhorn-system get backuptarget.longhorn.io default -o yaml
+kubectl -n longhorn-system get backups.longhorn.io
+```
+
+
+## Recurring Snapshot and Backup Jobs
+
+After the backup target is reachable, add simple recurring protection:
+
+- daily local snapshots, retained for 7 days
+- weekly external backups, retained for 4 weeks
+
+Example jobs live at:
+
+```text
+manifests/longhorn/recurring-jobs.example.yaml
+```
+
+Apply the examples after reviewing the schedule and retention:
+
+```bash
+kubectl apply -f manifests/longhorn/recurring-jobs.example.yaml
+kubectl -n longhorn-system get recurringjobs.longhorn.io
+```
+
+Then attach the jobs to selected volumes through the Longhorn UI or by assigning the matching recurring job group to a StorageClass/volume. For a homelab portfolio, it is enough to show the schedule, retention, target, and one successful backup artifact.
+
+## Restore Test Performed
+
+I verified the S3 backup target with a disposable Longhorn volume restore.
+
+Test result:
+
+```text
+Restored Longhorn volume: long-horn-test-backup
+Verified marker: restore-test-20260512-202740
+```
+
+Validation flow:
+
+1. Created test PVC data on a Longhorn-backed volume.
+2. Wrote marker `restore-test-20260512-202740` into the mounted data path.
+3. Created a Longhorn external backup to AWS S3.
+4. Restored that backup into a new Longhorn volume named `long-horn-test-backup`.
+5. Mounted the restored volume through a Kubernetes PV/PVC.
+6. Read the restored marker from the pod and confirmed it matched the original value.
+
+Success criteria met:
+
+```text
+A Longhorn volume was restored from the AWS S3 backup target into a new PVC, and the restored pod read the original marker file.
+```
+
+
 ## Cleanup Test Resources
 
 Remove test pods:
@@ -252,9 +338,8 @@ kubectl delete pvc longhorn-test-pvc
 
 ## Future Work
 
-- expose Longhorn UI privately over Tailscale
-- configure recurring snapshots
-- configure backup target, likely external disk or object storage
-- test restore from backup
+- enable recurring snapshots/backups for selected volumes
+- expose Longhorn UI privately over Tailscale if not already private
 - increase replica count after adding more physical nodes
 - document the multi-node storage plan
+- periodically repeat restore tests for real stateful workloads

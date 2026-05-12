@@ -1,0 +1,36 @@
+# Example Longhorn recurring jobs.
+# Apply only after the Longhorn backup target is configured and tested.
+# Attach these to selected volumes through the Longhorn UI or by assigning
+# the matching recurring job group to a StorageClass/volume.
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: daily-snapshot
+  namespace: longhorn-system
+spec:
+  cron: "0 3 * * *"
+  task: snapshot
+  groups:
+    - default
+  retain: 7
+  concurrency: 1
+  labels:
+    type: daily
+    scope: homelab
+---
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: weekly-backup
+  namespace: longhorn-system
+spec:
+  cron: "0 4 * * 0"
+  task: backup
+  groups:
+    - default
+  retain: 4
+  concurrency: 1
+  labels:
+    type: weekly
+    scope: homelab
