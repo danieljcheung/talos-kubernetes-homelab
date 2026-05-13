@@ -7,7 +7,7 @@ spec:
   ingressClassName: tailscale
   defaultBackend:
     service:
-      name: monitoring-grafana
+      name: kube-prometheus-stack-grafana
       port:
         number: 80
   tls:

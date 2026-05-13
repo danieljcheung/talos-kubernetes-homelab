@@ -18,6 +18,8 @@ prometheus:
 alertmanager:
   enabled: true
   alertmanagerSpec:
+    secrets:
+       - alertmanager-telegram
     alertmanagerConfigMatcherStrategy:
       type: None
     resources:

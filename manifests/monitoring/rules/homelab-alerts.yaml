@@ -4,7 +4,7 @@ metadata:
   name: homelab-alerts
   namespace: monitoring
   labels:
-    release: monitoring
+    release: kube-prometheus-stack
 spec:
   groups:
     - name: homelab.rules
