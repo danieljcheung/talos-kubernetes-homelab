@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
       annotations:
-        site-version: "2026-04-30-hosting-footer"
+        site-version: "2026-05-20-ibm-z-xplore"
     spec:
       volumes:
         - name: landing-page
