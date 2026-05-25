@@ -24,7 +24,8 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ SOPS workflow added for encrypted Git-tracked secrets
 ✅ Longhorn installed for Kubernetes-native persistent storage
 ✅ Longhorn external backups configured to AWS S3 and restore-tested
-⏭️ Next: enable recurring Longhorn backup jobs for selected volumes
+🔄 Third node / control-plane expansion in progress
+⏭️ Next: finish converting the former worker into the third control-plane member
 
 ## Hardware
 
@@ -39,8 +40,12 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
   - 16GB RAM
   - 256GB SSD
   - Ethernet
+- **New node:** hostname pending
+  - 32GB RAM
+  - 1TB storage
+  - Added as the most capable node for the move toward a three-node control-plane cluster
 
-In `kubectl get nodes`, the worker appears with role `<none>`. That is normal Kubernetes behavior; only the control-plane node receives the `control-plane` role label.
+The intended end state is three Talos nodes, all acting as control-plane members and all schedulable for homelab workloads. This gives etcd a real three-member quorum while still using all available hardware for applications.
 
 ## Architecture
 
@@ -108,7 +113,7 @@ Talos is different from a normal Linux server:
 
 ## Setup Journey
 
-The first machine arrived with Windows preinstalled, so the first major step was wiping the internal drive and replacing it with Talos Linux. The second node was later added as a dedicated worker using the original cluster's worker machine config.
+The first machine arrived with Windows preinstalled, so the first major step was wiping the internal drive and replacing it with Talos Linux. The second node was later added as a dedicated worker using the original cluster's worker machine config. The cluster is now being expanded toward a three-node control-plane layout.
 
 High-level process:
 

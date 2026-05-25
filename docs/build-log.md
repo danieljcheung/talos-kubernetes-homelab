@@ -799,3 +799,94 @@ manifests/longhorn/recurring-jobs.example.yaml
 
 This keeps the repo safe for a public portfolio while documenting the operational process an interviewer would expect: configure a target, prove recovery, record the result, and keep secrets out of Git.
 
+## Phase 31 — Expanding Toward Three Control Planes
+
+With a third physical machine available, the cluster target changed from a simple two-node layout to a three-node HA learning layout:
+
+```text
+node1: control plane + worker workloads
+node2: control plane + worker workloads
+node3: control plane + worker workloads
+```
+
+This is the minimum useful shape for etcd quorum. Two control-plane nodes are awkward because losing either member breaks quorum; three members can tolerate one node being offline.
+
+The new node is the most capable machine in the cluster, with 32GB RAM and 1TB storage. It should be useful for heavier workloads and storage-heavy applications, but the cluster should still avoid making that single machine a hard dependency for everything.
+
+Key Talos rules from the expansion:
+
+- Reuse the existing cluster's `controlplane.yaml` for new control-plane members.
+- Do not run `talosctl bootstrap` on additional control-plane nodes.
+- Keep `cluster.allowSchedulingOnControlPlanes: true` for this homelab so control-plane nodes can also run workloads.
+- Verify both Kubernetes nodes and etcd members after a node joins.
+
+## Phase 32 — Worker-to-Control-Plane Rebuild Troubleshooting
+
+The existing worker at `10.0.0.36` was selected to become another control-plane node. The safer Talos approach is to treat this as a rebuild: drain/evacuate workloads, reset or reinstall the node, then apply the existing cluster's `controlplane.yaml`.
+
+Several issues came up during the rebuild:
+
+1. The admin Mac initially could not reach Talos on `10.0.0.36:50000`.
+
+   Errors included:
+
+   ```text
+   no route to host
+   i/o timeout
+   ```
+
+   This indicated network/API reachability problems, not a YAML problem.
+
+2. Once the node became reachable, insecure apply returned:
+
+   ```text
+   tls: certificate required
+   ```
+
+   That meant the node was already configured and was not accepting insecure maintenance-mode configuration. Authenticated Talos commands are needed for an already-configured node; insecure apply is for maintenance/fresh install mode.
+
+3. The Dell OptiPlex kept showing:
+
+   ```text
+   Checking media presence
+   ```
+
+   The Dell boot menu showed:
+
+   ```text
+   Windows Boot Manager
+   Onboard NIC IPv4
+   Onboard NIC IPv6
+   ```
+
+   The NIC entries are PXE/network boot and should not be selected. If Talos only boots while the USB stick is inserted, the machine is probably booting Talos from USB instead of from the internal SSD.
+
+4. Disk discovery showed:
+
+   ```text
+   sda 256 GB SAMSUNG MZNLN256
+   sdb 31 GB USB Flash Drive
+   ```
+
+   Therefore the correct Talos install target for this Dell is `/dev/sda`. The local `/Users/dan/controlplane.yaml` had been generated with:
+
+   ```yaml
+   install:
+     disk: /dev/nvme0n1
+   ```
+
+   That path does not exist on this machine. The local machine config was patched to:
+
+   ```yaml
+   install:
+     disk: /dev/sda
+   ```
+
+The apply command for the USB-booted Dell is:
+
+```bash
+talosctl apply-config --nodes 10.0.0.36 --insecure \
+  --file /Users/dan/controlplane.yaml
+```
+
+After apply, reboot, remove the USB stick, and boot from the internal disk entry rather than NIC IPv4/IPv6.
