@@ -10,18 +10,20 @@ Current workload:
 - Owner/user: `company_brain_app`
 - Storage: Longhorn, 10Gi
 
-The database user Secret is intentionally not stored here in plaintext. Create or apply it separately before syncing the cluster manifest:
+The database user Secret is stored as a SOPS-encrypted manifest:
 
-```bash
-kubectl create namespace company-brain
-
-kubectl create secret generic company-brain-db-user \
-  -n company-brain \
-  --from-literal=username=company_brain_app \
-  --from-literal=password='<real-password>'
+```text
+manifests/postgres/company-brain-db-user.secret.yaml
 ```
 
-Later, convert that Secret to a SOPS-encrypted `*.secret.yaml` file.
+Apply it from Dan's Mac before syncing the CloudNativePG cluster, or whenever the live Secret needs to be recreated:
+
+```bash
+SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
+  sops --decrypt manifests/postgres/company-brain-db-user.secret.yaml | kubectl apply -f -
+```
+
+Do not add the encrypted Secret to `kustomization.yaml` until Argo CD has SOPS decryption support. In the current workflow, Argo CD manages non-secret manifests and Dan applies SOPS secrets manually from the trusted Mac.
 
 Local migration flow from Dan's Mac:
 

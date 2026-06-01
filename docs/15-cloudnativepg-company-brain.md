@@ -25,10 +25,23 @@ Installed CloudNativePG on the cluster.
 
 Created the `company-brain` namespace.
 
-Created a Kubernetes Secret named `company-brain-db-user` in the `company-brain` namespace with:
+Created a SOPS-encrypted Kubernetes Secret manifest for `company-brain-db-user` in the `company-brain` namespace with:
 
 - username: `company_brain_app`
-- password: stored only in the live cluster / local app env, not committed to Git
+- password: encrypted with SOPS, not committed in plaintext
+
+Encrypted file:
+
+```text
+manifests/postgres/company-brain-db-user.secret.yaml
+```
+
+Apply command:
+
+```bash
+SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
+  sops --decrypt manifests/postgres/company-brain-db-user.secret.yaml | kubectl apply -f -
+```
 
 Created a CloudNativePG `Cluster` named `company-brain-db`:
 
@@ -85,7 +98,7 @@ manifests/postgres/
 manifests/argocd/apps/postgres.yaml
 ```
 
-The live password Secret is not committed. Next improvement is to add a SOPS-encrypted `company-brain-db-user.secret.yaml` and document the apply command in `docs/12-sops-secrets-workflow.md`.
+The password Secret is committed only as a SOPS-encrypted manifest. It is intentionally not referenced by `manifests/postgres/kustomization.yaml` because Argo CD does not decrypt SOPS files in the current setup.
 
 ## Current Limitations
 

@@ -159,6 +159,7 @@ These are the real homelab secrets currently handled with SOPS.
 | --- | --- | --- | --- | --- | --- |
 | Telegram Alertmanager bot token | `Secret/alertmanager-telegram` | `monitoring` | `stringData.bot-token` | `manifests/monitoring/alertmanager-telegram.secret.yaml` | `sops --decrypt manifests/monitoring/alertmanager-telegram.secret.yaml \| kubectl apply -f -` |
 | Cloudflare Tunnel token | `Secret/cloudflare-tunnel-token` | `cloudflare` | `stringData.token` | `manifests/cloudflare-tunnel/cloudflare-tunnel-token.secret.yaml` | `sops --decrypt manifests/cloudflare-tunnel/cloudflare-tunnel-token.secret.yaml \| kubectl apply -f -` |
+| Company Brain Postgres user | `Secret/company-brain-db-user` | `company-brain` | `stringData.username`, `stringData.password` | `manifests/postgres/company-brain-db-user.secret.yaml` | `SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" sops --decrypt manifests/postgres/company-brain-db-user.secret.yaml \| kubectl apply -f -` |
 
 ### Local-only / not committed
 
