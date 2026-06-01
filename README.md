@@ -24,6 +24,7 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ SOPS workflow added for encrypted Git-tracked secrets
 ✅ Longhorn installed for Kubernetes-native persistent storage
 ✅ Longhorn external backups configured to AWS S3 and restore-tested
+✅ CloudNativePG Postgres created for the Company Brain app
 🔄 Third node / control-plane expansion in progress
 ⏭️ Next: finish converting the former worker into the third control-plane member
 
@@ -145,6 +146,7 @@ High-level process:
 - [SOPS Secrets Workflow](docs/12-sops-secrets-workflow.md)
 - [Longhorn Storage](docs/13-longhorn-storage.md)
 - [Architecture](docs/14-architecture.md)
+- [CloudNativePG for Company Brain](docs/15-cloudnativepg-company-brain.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)

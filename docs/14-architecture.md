@@ -55,8 +55,12 @@ flowchart TB
       direction LR
       argocd["Argo CD<br/>Sync controller"]
       nginx["nginx Site<br/>danieljcheung.com"]
-      future["Future Apps<br/>n8n · Postgres"]
+      future["Future Apps<br/>n8n"]
+      companyBrain["Company Brain<br/>Next.js app planned"]
+      postgres["CloudNativePG<br/>Company Brain Postgres"]
       argocd --> nginx
+      argocd --> postgres
+      companyBrain --> postgres
       argocd -. planned .-> future
     end
 
@@ -87,6 +91,7 @@ flowchart TB
     end
 
     longhorn --> pvcs["PVCs<br/>Stateful data"]
+    postgres --> pvcs
   end
 
   github -->|manifests| argocd
