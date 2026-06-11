@@ -15,11 +15,6 @@ spec:
           image: ghcr.io/danieljcheung/company-brain:latest
           imagePullPolicy: IfNotPresent
           command: ["npm", "run", "prisma:migrate:deploy"]
-          envFrom:
-            - configMapRef:
-                name: company-brain-app-config
-            - secretRef:
-                name: company-brain-app-secrets
           env:
             - name: DATABASE_URL
               valueFrom:
