@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: company-brain-app
+  labels:
+    app.kubernetes.io/name: company-brain-app
+spec:
+  selector:
+    app.kubernetes.io/name: company-brain-app
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

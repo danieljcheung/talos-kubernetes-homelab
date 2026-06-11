@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: company-brain-app
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: company-brain-app
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - company-brain
