@@ -8,4 +8,5 @@ resources:
   - deployment.yaml
   - service.yaml
   - migration-job.yaml
+  - gmail-sync-cronjob.yaml
   - tailscale-ingress.yaml
