@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
       annotations:
-        site-version: "2026-05-20-ibm-z-xplore"
+        site-version: "2026-06-16-company-brain-project"
     spec:
       volumes:
         - name: landing-page
