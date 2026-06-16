@@ -14,7 +14,7 @@ spec:
       labels:
         app: nginx
       annotations:
-        site-version: "2026-06-16-company-brain-project"
+        site-version: "2026-06-16-pearl-live-link"
     spec:
       volumes:
         - name: landing-page
