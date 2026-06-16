@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whisper
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: whisper
+      port:
+        number: 3000
+  tls:
+    - hosts:
+        - whisper
