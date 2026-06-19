@@ -25,6 +25,7 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Longhorn installed for Kubernetes-native persistent storage
 ✅ Longhorn external backups configured to AWS S3 and restore-tested
 ✅ CloudNativePG Postgres created for the Company Brain app
+✅ PreviewApp operator GitOps setup configured
 🔄 Third node / control-plane expansion in progress
 ⏭️ Next: finish converting the former worker into the third control-plane member
 
@@ -62,6 +63,7 @@ flowchart TB
     direction TB
     argocd["Argo CD<br/>GitOps"]
     site["nginx Personal Site<br/>danieljcheung.com"]
+    previews["Preview Environments<br/>*.popinvites.com"]
     tunnel["cloudflared<br/>Public tunnel connector"]
     dashboards["Private Dashboards<br/>Grafana · Headlamp · Longhorn"]
     monitoring["Observability<br/>Prometheus · Loki · Alloy · Alertmanager"]
@@ -69,7 +71,9 @@ flowchart TB
     secrets["SOPS<br/>Encrypted secrets in Git"]
 
     argocd --> site
+    argocd --> previews
     tunnel --> site
+    tunnel --> previews
     monitoring --> dashboards
     storage --> site
   end
@@ -91,7 +95,7 @@ flowchart TB
   class github,cloudflare,tailscale,telegram external
   class dan user
   class argocd,dashboards,secrets platform
-  class site,tunnel workload
+  class site,tunnel,previews workload
   class monitoring ops
   class storage storageClass
 ```
@@ -147,6 +151,7 @@ High-level process:
 - [Longhorn Storage](docs/13-longhorn-storage.md)
 - [Architecture](docs/14-architecture.md)
 - [CloudNativePG for Company Brain](docs/15-cloudnativepg-company-brain.md)
+- [PreviewApp Operator GitOps Setup](docs/16-previewapp-operator-gitops.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)

@@ -58,16 +58,22 @@ flowchart TB
       future["Future Apps<br/>n8n"]
       companyBrain["Company Brain<br/>Next.js app planned"]
       postgres["CloudNativePG<br/>Company Brain Postgres"]
+      previewappOperator["PreviewApp Operator<br/>previewapp-system"]
+      previewapps["PreviewApp Previews<br/>previews namespace"]
+
       argocd --> nginx
       argocd --> postgres
       companyBrain --> postgres
       argocd -. planned .-> future
+      argocd --> previewappOperator
+      previewappOperator -. creates/reconciles .-> previewapps
     end
 
     subgraph access["Access Layer"]
       direction LR
       cloudflared["cloudflared<br/>Tunnel connector"]
       tsIngress["Tailscale Ingress<br/>Private dashboards"]
+      ingressNginx["ingress-nginx<br/>Ingress Controller"]
     end
 
     subgraph observability["Observability"]
@@ -96,6 +102,7 @@ flowchart TB
 
   github -->|manifests| argocd
   cloudflare -->|public HTTPS| cloudflared --> nginx
+  cloudflare -->|public HTTPS *.popinvites.com| cloudflared --> ingressNginx --> previewapps
   tailscale -->|private HTTPS| tsIngress
   tsIngress --> argocd
   tsIngress --> grafana
@@ -113,8 +120,8 @@ flowchart TB
   classDef storage fill:#fefce8,stroke:#ca8a04,color:#111827
 
   class github,cloudflare,tailscale,telegram,s3 external
-  class argocd,nginx,future gitops
-  class cloudflared,tsIngress access
+  class argocd,nginx,future,previewappOperator,previewapps gitops
+  class cloudflared,tsIngress,ingressNginx access
   class alloy,loki,prometheus,grafana,alertmanager obs
   class headlamp,longhorn,sops platform
   class pvcs storage
@@ -123,6 +130,7 @@ flowchart TB
 ## Access Model
 
 - Public traffic only reaches the personal site through Cloudflare Tunnel.
+- Public preview environments are exposed dynamically under subdomains of `popinvites.com` using Cloudflare wildcard routing to the internal `ingress-nginx` controller.
 - Admin dashboards stay private through Tailscale ingress.
 - Secrets are encrypted in Git with SOPS and applied from the trusted admin machine for now.
 - Longhorn provides persistent volumes and external AWS S3 backups, but the current two-node setup is still not a fully highly available storage/control-plane design.

@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: previewapp-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danieljcheung/previewapp-operator.git
+    targetRevision: HEAD
+    path: deploy/gitops/previewapp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: previewapp-system
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
