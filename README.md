@@ -152,6 +152,7 @@ High-level process:
 - [Architecture](docs/14-architecture.md)
 - [CloudNativePG for Company Brain](docs/15-cloudnativepg-company-brain.md)
 - [PreviewApp Operator GitOps Setup](docs/16-previewapp-operator-gitops.md)
+- [Whisper Learnings and Issues](docs/17-whisper-learnings-and-issues.md)
 - [Build Log](docs/build-log.md)
 - [nginx Personal Website](manifests/nginx/README.md)
 - [Cloudflare Tunnel Manifests](manifests/cloudflare-tunnel/README.md)

@@ -60,8 +60,10 @@ flowchart TB
       postgres["CloudNativePG<br/>Company Brain Postgres"]
       previewappOperator["PreviewApp Operator<br/>previewapp-system"]
       previewapps["PreviewApp Previews<br/>previews namespace"]
+      whisper["Whisper<br/>Private clipboard"]
 
       argocd --> nginx
+      argocd --> whisper
       argocd --> postgres
       companyBrain --> postgres
       argocd -. planned .-> future
@@ -106,6 +108,7 @@ flowchart TB
   tailscale -->|private HTTPS| tsIngress
   tsIngress --> argocd
   tsIngress --> grafana
+  tsIngress --> whisper
   tsIngress --> headlamp
   tsIngress --> longhorn
   alertmanager -->|notifications| telegram
@@ -120,7 +123,7 @@ flowchart TB
   classDef storage fill:#fefce8,stroke:#ca8a04,color:#111827
 
   class github,cloudflare,tailscale,telegram,s3 external
-  class argocd,nginx,future,previewappOperator,previewapps gitops
+  class argocd,nginx,whisper,future,previewappOperator,previewapps gitops
   class cloudflared,tsIngress,ingressNginx access
   class alloy,loki,prometheus,grafana,alertmanager obs
   class headlamp,longhorn,sops platform
