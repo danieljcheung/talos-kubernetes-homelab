@@ -1,0 +1,16 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: agent-event-ledger
+  namespace: agent-event-ledger
+  labels:
+    release: monitoring
+    app.kubernetes.io/name: agent-event-ledger
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agent-event-ledger
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s

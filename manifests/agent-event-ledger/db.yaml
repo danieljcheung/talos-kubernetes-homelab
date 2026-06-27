@@ -1,0 +1,16 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: agent-event-ledger-db
+  namespace: agent-event-ledger
+spec:
+  instances: 1
+
+  storage:
+    storageClass: longhorn
+    size: 5Gi
+
+  bootstrap:
+    initdb:
+      database: agent_event_ledger
+      owner: agent_event_ledger

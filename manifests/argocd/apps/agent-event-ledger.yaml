@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-event-ledger
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danieljcheung/talos-kubernetes-homelab.git
+    targetRevision: HEAD
+    path: manifests/agent-event-ledger
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agent-event-ledger
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
