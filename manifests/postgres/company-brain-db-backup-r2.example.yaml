@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: company-brain-db-backup-r2
+  namespace: company-brain
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: REPLACE_ME
+  SECRET_ACCESS_KEY: REPLACE_ME

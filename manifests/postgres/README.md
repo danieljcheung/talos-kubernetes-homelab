@@ -1,6 +1,6 @@
 # CloudNativePG Postgres
 
-This directory contains the GitOps-managed, non-secret manifests for Postgres workloads.
+This directory contains the GitOps-managed, non-secret manifests for Postgres workloads, plus SOPS-encrypted Secret manifests that are applied manually from Dan's Mac.
 
 Current workload:
 
@@ -9,21 +9,35 @@ Current workload:
 - Database: `company_brain`
 - Owner/user: `company_brain_app`
 - Storage: Longhorn, 10Gi
+- Object-store backups: CloudNativePG/Barman to Cloudflare R2 at `s3://company-brain-sources/postgres-backups/`
+- Scheduled backup: `company-brain-db-daily` at `07:00:00`
 
-The database user Secret is stored as a SOPS-encrypted manifest:
+The database user Secret and R2 backup credential Secret are stored as SOPS-encrypted manifests:
 
 ```text
 manifests/postgres/company-brain-db-user.secret.yaml
+manifests/postgres/company-brain-db-backup-r2.secret.yaml
 ```
 
-Apply it from Dan's Mac before syncing the CloudNativePG cluster, or whenever the live Secret needs to be recreated:
+Apply them from Dan's Mac before syncing the CloudNativePG cluster, or whenever the live Secrets need to be recreated:
 
 ```bash
 SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
   sops --decrypt manifests/postgres/company-brain-db-user.secret.yaml | kubectl apply -f -
+SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt" \
+  sops --decrypt manifests/postgres/company-brain-db-backup-r2.secret.yaml | kubectl apply -f -
 ```
 
-Do not add the encrypted Secret to `kustomization.yaml` until Argo CD has SOPS decryption support. In the current workflow, Argo CD manages non-secret manifests and Dan applies SOPS secrets manually from the trusted Mac.
+Do not add encrypted Secret manifests to `kustomization.yaml` until Argo CD has SOPS decryption support. In the current workflow, Argo CD manages non-secret manifests and Dan applies SOPS secrets manually from the trusted Mac.
+
+Backup verification:
+
+```bash
+kubectl -n company-brain get scheduledbackup company-brain-db-daily
+kubectl -n company-brain get backups.postgresql.cnpg.io
+```
+
+Manual backup test completed on 2026-06-15 with `Backup/company-brain-db-manual-test-2` reaching `completed`.
 
 Local migration flow from Dan's Mac:
 

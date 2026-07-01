@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - company-brain-db.yaml
+  - company-brain-db-scheduled-backup.yaml

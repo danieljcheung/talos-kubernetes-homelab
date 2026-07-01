@@ -10,6 +10,20 @@ spec:
     storageClass: longhorn
     size: 10Gi
 
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://company-brain-sources/postgres-backups/
+      endpointURL: https://2e9a48cbb174b3ed64aefade25943c6b.r2.cloudflarestorage.com
+      s3Credentials:
+        accessKeyId:
+          name: company-brain-db-backup-r2
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: company-brain-db-backup-r2
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+
   bootstrap:
     initdb:
       database: company_brain

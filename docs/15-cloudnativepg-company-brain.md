@@ -16,7 +16,7 @@ Staff browser
   -> internal Kubernetes service
   -> CloudNativePG Postgres
   -> Longhorn PVC
-  -> Longhorn S3 backups
+  -> Longhorn PVC + CloudNativePG object-store backups to R2
 ```
 
 ## What Was Done
@@ -52,16 +52,32 @@ Created a CloudNativePG `Cluster` named `company-brain-db`:
 - storage class: `longhorn`
 - size: `10Gi`
 
-Created a local port-forward from Dan's Mac:
+Configured CloudNativePG/Barman object-store backups for the database:
 
-```bash
-kubectl port-forward -n company-brain svc/company-brain-db-rw 5432:5432
-```
+- R2 destination: `s3://company-brain-sources/postgres-backups/`
+- endpoint: Cloudflare R2 account endpoint
+- credentials Secret: `company-brain-db-backup-r2`
+- encrypted manifest: `manifests/postgres/company-brain-db-backup-r2.secret.yaml`
+- schedule: daily at `07:00:00` via `ScheduledBackup/company-brain-db-daily`
 
-Configured the Company Brain app to use:
+Verification on 2026-06-15:
 
 ```text
-postgresql://company_brain_app:<password>@localhost:5432/company_brain?schema=public&sslmode=disable
+Backup/company-brain-db-manual-test-2 phase: completed
+```
+
+Note: the first test against bucket `company-brain-postgres-backups` failed with R2 `AccessDenied`; the working target is the existing `company-brain-sources` bucket under the `postgres-backups/` prefix.
+
+Production access is cluster-internal only. The Company Brain app uses the CloudNativePG read-write service:
+
+```text
+postgresql://company_brain_app:<password>@company-brain-db-rw.company-brain.svc.cluster.local:5432/company_brain?schema=public
+```
+
+Do not keep a long-running `kubectl port-forward` on local port `5432` for production. Use a short-lived port-forward only for manual maintenance/debugging, then stop it immediately:
+
+```bash
+kubectl port-forward -n company-brain svc/company-brain-db-rw 15432:5432
 ```
 
 Applied the existing Prisma migration with:
@@ -98,7 +114,7 @@ manifests/postgres/
 manifests/argocd/apps/postgres.yaml
 ```
 
-The password Secret is committed only as a SOPS-encrypted manifest. It is intentionally not referenced by `manifests/postgres/kustomization.yaml` because Argo CD does not decrypt SOPS files in the current setup.
+The password Secret and R2 backup credential Secret are committed only as SOPS-encrypted manifests. They are intentionally not referenced by `manifests/postgres/kustomization.yaml` because Argo CD does not decrypt SOPS files in the current setup.
 
 ## Current Limitations
 
@@ -107,7 +123,7 @@ This is a single Postgres instance on Longhorn. It gives persistent storage and 
 Before relying on this for production-like use:
 
 - confirm Longhorn recurring backups apply to the database volume
-- add periodic `pg_dump` or CloudNativePG object-store backups
+- periodically restore-test CloudNativePG object-store backups from R2
 - deploy the Company Brain app into Kubernetes
 - expose only the web app through Cloudflare Tunnel / Cloudflare Access
 - keep Postgres cluster-internal only
