@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: apply-agent-postgres-backup-r2
+  namespace: apply-agent
+type: Opaque
+stringData:
+  ACCESS_KEY_ID: "REPLACE_ME_ACCESS_KEY_ID"
+  SECRET_ACCESS_KEY: "REPLACE_ME_SECRET_ACCESS_KEY"
