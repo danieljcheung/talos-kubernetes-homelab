@@ -13,7 +13,7 @@ data:
   OMP_WORKER_URL: "http://local-business-prospector-omp-worker.local-business-prospector.svc.cluster.local:8788"
   SQLITE_DB_PATH: "/app/out/local-business-prospector.sqlite"
   SITES_OUT: "/app/out/sites"
-  AUTH_MODE: "operator-token"
+  AUTH_MODE: "cloudflare-access"
   ALLOWED_ORIGINS: "https://prospector.danieljcheung.com"
   CREDENTIAL_ENTRY_MODE: "disabled"
   OMP_RPC_MODEL: "google-antigravity/gemini-3.5-flash:high"
