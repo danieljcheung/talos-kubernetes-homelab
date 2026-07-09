@@ -49,7 +49,7 @@ spec:
               mountPath: /home/omp/.omp
       containers:
         - name: omp-worker
-          image: ghcr.io/danieljcheung/local-business-prospector-omp-worker@sha256:eab1947472ad59a9c470bf9877f3d828bf18245db5b5a25aa76eb94f0bc50b61
+          image: ghcr.io/danieljcheung/local-business-prospector-omp-worker@sha256:0677e96709cb1944c8d7ced3e5f0639f0a94b0bcd5206fd53062f24c33492e18
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
