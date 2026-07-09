@@ -49,7 +49,7 @@ spec:
               mountPath: /app/out
       containers:
         - name: dashboard
-          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:30249856f8eed2d42d9822e6b573679e64aa3afe5eca0caadc917cca1febabc7
+          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:1bf3585ad7b2710a094ca7eedf399665f21c9db51c0618a99bbc5e57499ccc78
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
