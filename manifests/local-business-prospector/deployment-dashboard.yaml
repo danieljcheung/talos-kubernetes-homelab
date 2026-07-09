@@ -36,7 +36,7 @@ spec:
           command:
             - sh
             - -c
-            - "mkdir -p /app/out/cache /app/out/searches /app/out/sites && chmod -R 0770 /app/out"
+            - "mkdir -p /app/out/cache /app/out/searches /app/out/sites"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

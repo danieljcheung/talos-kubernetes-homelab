@@ -36,7 +36,7 @@ spec:
           command:
             - sh
             - -c
-            - "mkdir -p /home/omp/.omp && chmod -R 0770 /home/omp/.omp"
+            - "mkdir -p /home/omp/.omp"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
