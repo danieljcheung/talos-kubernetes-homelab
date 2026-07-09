@@ -1,0 +1,141 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: local-business-prospector
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: local-business-prospector
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dashboard-ingress-from-cloudflare
+  namespace: local-business-prospector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: dashboard
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cloudflare
+      ports:
+        - protocol: TCP
+          port: 8787
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dashboard-egress-to-worker
+  namespace: local-business-prospector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: dashboard
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: local-business-prospector
+              app.kubernetes.io/component: omp-worker
+      ports:
+        - protocol: TCP
+          port: 8788
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-ingress-from-dashboard
+  namespace: local-business-prospector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: omp-worker
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: local-business-prospector
+              app.kubernetes.io/component: dashboard
+      ports:
+        - protocol: TCP
+          port: 8788
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dashboard-external-egress
+  namespace: local-business-prospector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: dashboard
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-worker-external-egress
+  namespace: local-business-prospector
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: omp-worker
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443

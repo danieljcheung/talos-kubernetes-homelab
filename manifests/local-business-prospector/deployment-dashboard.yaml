@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-business-prospector-dashboard
+  namespace: local-business-prospector
+  labels:
+    app.kubernetes.io/name: local-business-prospector
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: local-business-prospector
+        app.kubernetes.io/component: dashboard
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: init-output-dir
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - "mkdir -p /app/out/cache /app/out/searches /app/out/sites && chmod -R 0770 /app/out"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data
+              mountPath: /app/out
+      containers:
+        - name: dashboard
+          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:b5b2867f2a7a4a155e3fd9a300fd22fb8cfba73951c6769a70f26c75d7baf1da
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8787
+              name: http
+          envFrom:
+            - configMapRef:
+                name: local-business-prospector-config
+            - secretRef:
+                name: local-business-prospector-dashboard-secret
+          volumeMounts:
+            - name: data
+              mountPath: /app/out
+            - name: tmp-dir
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: local-business-prospector-data
+        - name: tmp-dir
+          emptyDir: {}

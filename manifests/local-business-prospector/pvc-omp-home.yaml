@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-business-prospector-omp-home
+  namespace: local-business-prospector
+  labels:
+    app.kubernetes.io/name: local-business-prospector
+    app.kubernetes.io/component: omp-worker
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 2Gi

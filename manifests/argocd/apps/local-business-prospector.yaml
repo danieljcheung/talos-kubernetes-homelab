@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: local-business-prospector
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danieljcheung/talos-kubernetes-homelab.git
+    targetRevision: HEAD
+    path: manifests/local-business-prospector
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: local-business-prospector
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

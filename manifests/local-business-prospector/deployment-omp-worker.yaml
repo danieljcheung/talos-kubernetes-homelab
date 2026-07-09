@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-business-prospector-omp-worker
+  namespace: local-business-prospector
+  labels:
+    app.kubernetes.io/name: local-business-prospector
+    app.kubernetes.io/component: omp-worker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: local-business-prospector
+      app.kubernetes.io/component: omp-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: local-business-prospector
+        app.kubernetes.io/component: omp-worker
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: init-omp-home
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - "mkdir -p /home/omp/.omp && chmod -R 0770 /home/omp/.omp"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: omp-home
+              mountPath: /home/omp/.omp
+      containers:
+        - name: omp-worker
+          image: ghcr.io/danieljcheung/local-business-prospector-omp-worker@sha256:00d3a95b594fe811f92e413754978ae374beffeebd834f0537ebf214b6b54e96
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          ports:
+            - containerPort: 8788
+              name: http
+          envFrom:
+            - configMapRef:
+                name: local-business-prospector-config
+            - secretRef:
+                name: local-business-prospector-omp-worker-secret
+          env:
+            - name: PORT
+              value: "8788"
+            - name: HOST
+              value: "0.0.0.0"
+            - name: HOME
+              value: "/home/omp"
+          volumeMounts:
+            - name: omp-home
+              mountPath: /home/omp/.omp
+            - name: tmp-dir
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: omp-home
+          persistentVolumeClaim:
+            claimName: local-business-prospector-omp-home
+        - name: tmp-dir
+          emptyDir: {}

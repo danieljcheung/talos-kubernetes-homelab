@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-business-prospector-web
+  namespace: local-business-prospector
+  labels:
+    app.kubernetes.io/name: local-business-prospector
+    app.kubernetes.io/component: dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8787
+      targetPort: 8787
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: local-business-prospector
+    app.kubernetes.io/component: dashboard

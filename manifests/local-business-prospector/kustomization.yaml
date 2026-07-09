@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: local-business-prospector
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - pvc-dashboard.yaml
+  - pvc-omp-home.yaml
+  - deployment-dashboard.yaml
+  - service-dashboard.yaml
+  - deployment-omp-worker.yaml
+  - service-omp-worker.yaml
+  - networkpolicy.yaml
