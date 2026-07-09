@@ -49,7 +49,7 @@ spec:
               mountPath: /app/out
       containers:
         - name: dashboard
-          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:020486e3b85655dbcf27efd156cec36e85050c491cdde9e7e40618b847cdb3cc
+          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:0cd9274624f37ba852834d6902f9788a1a1eef5524ac76f684b9711890286092
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -86,7 +86,7 @@ spec:
             periodSeconds: 10
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /health
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
