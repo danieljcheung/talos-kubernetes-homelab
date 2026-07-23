@@ -49,7 +49,7 @@ spec:
               mountPath: /app/out
       containers:
         - name: dashboard
-          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:79ea78687e229ba3aa407ff655bcff4316b5429d4fdf151066cca6d34180ef78
+          image: ghcr.io/danieljcheung/local-business-prospector-dashboard@sha256:f826e0d2d5ba746dd0615d12286b84c1e875192a8b70f9b1e446aadbedaf0b85
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -66,6 +66,12 @@ spec:
                 name: local-business-prospector-config
             - secretRef:
                 name: local-business-prospector-dashboard-secret
+          env:
+            - name: OMP_RPC_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: local-business-prospector-config
+                  key: OMP_RPC_MODEL
           volumeMounts:
             - name: data
               mountPath: /app/out

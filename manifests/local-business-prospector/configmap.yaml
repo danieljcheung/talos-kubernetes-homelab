@@ -16,7 +16,7 @@ data:
   AUTH_MODE: "cloudflare-access"
   ALLOWED_ORIGINS: "https://prospector.danieljcheung.com"
   CREDENTIAL_ENTRY_MODE: "disabled"
-  OMP_RPC_MODEL: "google-antigravity/gemini-3.5-flash:high"
+  OMP_RPC_MODEL: "google-antigravity/gemini-3.6-flash-high"
   OMP_RPC_FALLBACK_MODEL: "gpt-5.4-mini"
   OMP_RPC_AUTO_APPROVE: "true"
   OMP_RPC_SKILLS: "design-taste-frontend"

@@ -49,7 +49,7 @@ spec:
               mountPath: /home/omp/.omp
       containers:
         - name: omp-worker
-          image: ghcr.io/danieljcheung/local-business-prospector-omp-worker@sha256:58d1f844bcc3748536077f61b738887f6864cc2b6148d75b63620bd5ceaf19fa
+          image: ghcr.io/danieljcheung/local-business-prospector-omp-worker@sha256:6c88a80902697fa33874d2da21ad4ed892e06edd2cf826602c9a4aacab697d5b
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false
@@ -67,6 +67,11 @@ spec:
             - secretRef:
                 name: local-business-prospector-omp-worker-secret
           env:
+            - name: OMP_RPC_MODEL
+              valueFrom:
+                configMapKeyRef:
+                  name: local-business-prospector-config
+                  key: OMP_RPC_MODEL
             - name: PORT
               value: "8788"
             - name: HOST
