@@ -38,6 +38,9 @@ spec:
       ports:
         - protocol: TCP
           port: 25565
+        # Simple Voice Chat is optional but explicitly enabled on the edge.
+        - protocol: UDP
+          port: 24454
     # Prometheus may scrape the backup textfile sidecar only.
     - from:
         - namespaceSelector:

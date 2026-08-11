@@ -56,7 +56,8 @@ private workstation until the pack PVC is ready. Inspect `HOW-TO-RUN.md`,
 Confirm the pack is Minecraft 1.20.1, Fabric, Java 17, and inspect its optional
 network features before opening firewall ports. The verified pack includes
 Simple Voice Chat (`voicechat-fabric-1.20.1-2.6.17.jar`), which uses UDP 24454;
-the current deployment intentionally exposes only Minecraft TCP 25565.
+the Kubernetes Service and NetworkPolicy expose Minecraft TCP 25565 and voice
+chat UDP 24454; the home router still needs the UDP forward for public use.
 
 The expected SHA-256 for the approved ZIP is:
 
@@ -88,10 +89,10 @@ requirement, with an exact Minecraft 1.20.1/Fabric-compatible version and a
 client-install decision; the official pack already supplies its gameplay,
 library, performance, and content mods.
 
-Simple Voice Chat is already included in the official pack, but it is not
-publicly reachable in the current deployment. Enabling it requires an explicit
-edge change: expose UDP 24454 on the gameplay Service, NetworkPolicy, and home
-router, then test from outside the LAN. Keep `voicechat-server.properties`
+Simple Voice Chat is already included in the official pack, and the Kubernetes
+Service and NetworkPolicy now expose its UDP 24454 endpoint. Public use still
+requires an explicit home-router UDP 24454 forward, followed by an external
+voice-chat test. Keep `voicechat-server.properties`
 at `port=24454`; do not change it to `-1`, which shares the Minecraft port.
 Keep `force_voice_chat=false` unless every allowed client is required to use
 voice chat. No UDP rule is needed for ordinary Minecraft gameplay.
