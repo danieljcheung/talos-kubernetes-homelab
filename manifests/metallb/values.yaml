@@ -42,10 +42,11 @@ controller:
       memory: 128Mi
     limits:
       cpu: 200m
-      memory: 256Mi
-
 speaker:
   enabled: true
+  # Talos labels every control-plane node as excluded from external LBs;
+  # MetalLB is intentionally allowed to advertise the single approved VIP.
+  ignoreExcludeLB: true
   resources:
     requests:
       cpu: 100m
