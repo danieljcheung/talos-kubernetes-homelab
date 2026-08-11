@@ -53,8 +53,10 @@ Download **Homestead Server Pack 1.3.7** only from the official server-pack page
 <https://cozystudios.org/homestead/server-pack/>. Keep the ZIP on a trusted,
 private workstation until the pack PVC is ready. Inspect `HOW-TO-RUN.md`,
 `variables.txt`, `server.properties`, `mods/`, and `config/` before staging it.
-Confirm the pack is Minecraft 1.20.1, Fabric, Java 17, and does not require an
-additional public port.
+Confirm the pack is Minecraft 1.20.1, Fabric, Java 17, and inspect its optional
+network features before opening firewall ports. The verified pack includes
+Simple Voice Chat (`voicechat-fabric-1.20.1-2.6.17.jar`), which uses UDP 24454;
+the current deployment intentionally exposes only Minecraft TCP 25565.
 
 The expected SHA-256 for the approved ZIP is:
 
@@ -77,6 +79,23 @@ main image starts from that verified data and keeps
 generic-pack reapply path while preserving the official ZIP as the private
 source of truth. Do not remove the init container or re-enable generic-pack
 reapplication without repeating the non-root startup proof.
+
+## Plugins and optional voice chat
+
+This is a Fabric server pack, not a Bukkit/Paper server. Do not install
+Bukkit, Spigot, or Paper plugins. Add another Fabric mod only for a concrete
+requirement, with an exact Minecraft 1.20.1/Fabric-compatible version and a
+client-install decision; the official pack already supplies its gameplay,
+library, performance, and content mods.
+
+Simple Voice Chat is already included in the official pack, but it is not
+publicly reachable in the current deployment. Enabling it requires an explicit
+edge change: expose UDP 24454 on the gameplay Service, NetworkPolicy, and home
+router, then test from outside the LAN. Keep `voicechat-server.properties`
+at `port=24454`; do not change it to `-1`, which shares the Minecraft port.
+Keep `force_voice_chat=false` unless every allowed client is required to use
+voice chat. No UDP rule is needed for ordinary Minecraft gameplay.
+
 
 ## EULA and allowlist gate
 
