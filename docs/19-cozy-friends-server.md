@@ -54,7 +54,9 @@ Verified at the current checkpoint:
    nodes are `Ready`, Longhorn is provisioned, and the existing monitoring,
    ingress-nginx, kube-proxy, and Cloudflare Tunnel paths were inspected.
 2. MetalLB chart `0.16.1` is installed; its controller and all three speakers
-   are `Ready`. The address pool and gameplay Service remain unsynced.
+   are `Ready`. A temporary selector-matching `LoadBalancer` Service received
+   `10.0.0.254`, and LAN TCP/HTTP probes succeeded; the temporary resources
+   were deleted. The production pool and gameplay Service remain unsynced.
 3. The router LAN is `10.0.0.0/24` with DHCP `.2`–`.253`. Candidate
    `10.0.0.254` was absent from the router lease page, ARP, and ping.
 4. Router WAN IPv4 `99.227.195.189` matches the independent public IPv4 probe.
