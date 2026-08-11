@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import {
   COMMUNITY_LINE,
   CONNECTION_STEPS,
@@ -6,14 +6,109 @@ import {
   HERO_EYEBROW,
   HERO_HEADING,
   INVITE_NOTE,
+  USERNAME_REQUEST_BODY,
+  USERNAME_REQUEST_EYEBROW,
+  USERNAME_REQUEST_HEADING,
   LAUNCHER_GUIDES,
   RESOURCE_LINKS,
   SERVER_ADDRESS,
   TROUBLESHOOTING,
+  USERNAME_REQUEST_FAILURE,
+  USERNAME_REQUEST_LABEL,
+  USERNAME_REQUEST_PLACEHOLDER,
+  USERNAME_REQUEST_SUBMIT,
+  USERNAME_REQUEST_SUBMITTING,
+  USERNAME_REQUEST_SUCCESS,
+  USERNAME_REQUEST_VALIDATION,
   VERSION_LINE
 } from './content'
 
 type CopyState = 'idle' | 'copied' | 'failed'
+
+type UsernameSubmissionState = 'idle' | 'submitting' | 'submitted' | 'failed'
+
+function UsernameRequestForm() {
+  const [username, setUsername] = useState('')
+  const [submissionState, setSubmissionState] = useState<UsernameSubmissionState>('idle')
+  const [submissionError, setSubmissionError] = useState('')
+
+  const submitUsername = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSubmissionState('submitting')
+    setSubmissionError('')
+
+    try {
+      const response = await fetch('/api/usernames', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim() })
+      })
+      let payload: unknown = null
+      try {
+        payload = await response.json()
+      } catch {
+        // The generic failure copy below is enough when the API sends no JSON.
+      }
+      if (!response.ok) {
+        const message = typeof payload === 'object' && payload !== null && 'error' in payload
+          ? payload.error
+          : null
+        throw new Error(typeof message === 'string' ? message : USERNAME_REQUEST_FAILURE)
+      }
+      setSubmissionState('submitted')
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : USERNAME_REQUEST_FAILURE)
+      setSubmissionState('failed')
+    }
+  }
+
+  if (submissionState === 'submitted') {
+    return (
+      <p className="username-form__status username-form__status--success" role="status">
+        {USERNAME_REQUEST_SUCCESS}
+      </p>
+    )
+  }
+
+  return (
+    <form className="username-form" onSubmit={submitUsername}>
+      <label className="username-form__label" htmlFor="minecraft-username">
+        {USERNAME_REQUEST_LABEL}
+      </label>
+      <p className="username-form__help" id="username-help">
+        {USERNAME_REQUEST_VALIDATION}
+      </p>
+      <div className="username-form__row">
+        <input
+          id="minecraft-username"
+          name="username"
+          type="text"
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          placeholder={USERNAME_REQUEST_PLACEHOLDER}
+          minLength={3}
+          maxLength={16}
+          pattern="[A-Za-z0-9_]{3,16}"
+          autoComplete="nickname"
+          required
+          aria-describedby="username-help username-status"
+          disabled={submissionState === 'submitting'}
+        />
+        <button className="copy-button" type="submit" disabled={submissionState === 'submitting'}>
+          {submissionState === 'submitting' ? USERNAME_REQUEST_SUBMITTING : USERNAME_REQUEST_SUBMIT}
+        </button>
+      </div>
+      <p
+        className={submissionState === 'failed' ? 'username-form__status username-form__status--error' : 'username-form__status'}
+        id="username-status"
+        role={submissionState === 'failed' ? 'alert' : undefined}
+        aria-live="polite"
+      >
+        {submissionState === 'failed' ? submissionError : ''}
+      </p>
+    </form>
+  )
+}
 
 type ExternalLinkProps = {
   href: string
@@ -95,6 +190,7 @@ export function CozyFriendsApp() {
             <a href="#install">Install</a>
             <a href="#connect">Connect</a>
             <a href="#troubleshooting">Help</a>
+            <a href="#request">Join</a>
           </nav>
         </div>
       </header>
@@ -126,6 +222,17 @@ export function CozyFriendsApp() {
               <p className="invite-note">{INVITE_NOTE}</p>
             </div>
             <FieldGuideArt />
+          </div>
+        </section>
+
+        <section className="ruled-band request-band" id="request" aria-labelledby="request-heading">
+          <div className="page-frame split-band">
+            <div className="section-intro">
+              <p className="eyebrow">{USERNAME_REQUEST_EYEBROW}</p>
+              <h2 id="request-heading">{USERNAME_REQUEST_HEADING}</h2>
+              <p>{USERNAME_REQUEST_BODY}</p>
+            </div>
+            <UsernameRequestForm />
           </div>
         </section>
 

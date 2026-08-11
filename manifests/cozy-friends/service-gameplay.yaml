@@ -9,7 +9,6 @@ metadata:
     app.kubernetes.io/component: gameplay
   annotations:
     metallb.io/address-pool: minecraft-public
-    # LAN-verified unused; keep the WAN rule gated until the edge is tested.
     metallb.io/loadBalancerIPs: 10.0.0.254
 spec:
   type: LoadBalancer

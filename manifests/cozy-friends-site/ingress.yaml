@@ -13,6 +13,13 @@ spec:
     - host: cozy.popinvites.com
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: cozy-friends-approval-api
+                port:
+                  number: 8080
           - path: /
             pathType: Prefix
             backend:

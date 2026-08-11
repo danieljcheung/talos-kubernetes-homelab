@@ -222,11 +222,51 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
+        - name: whitelist-sync
+          image: itzg/minecraft-server:2026.8.0-java17@sha256:d080ed3ce21e8d5b96dca46c4bbb245783285cc24e1c8e503f56219f872a75b6
+          imagePullPolicy: IfNotPresent
+          command:
+            - /hooks/whitelist-sync.sh
+          env:
+            - name: APPROVAL_API_URL
+              value: http://cozy-friends-approval-api.cozy-friends-site.svc.cluster.local:8080/api/whitelist/approved.txt
+            - name: APPROVAL_SYNC_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cozy-friends-secrets
+                  key: whitelist-sync-token
+            - name: RCON_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cozy-friends-secrets
+                  key: rcon-password
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: backup-hooks
+              mountPath: /hooks
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
         - name: node-exporter
           image: prom/node-exporter:v1.11.1@sha256:fbd8062b4529e166e902bd62cd93de2f48b36d50af942620d419657265bc20b1
           imagePullPolicy: IfNotPresent
           args:
-            - --collector.textfile
+            - --collector.disable-defaults
             - --collector.textfile.directory=/metrics
             - --web.listen-address=:9100
           ports:

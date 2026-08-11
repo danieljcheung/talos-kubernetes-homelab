@@ -129,6 +129,18 @@ disaster recovery.
 See [Cozy Friends Server](docs/19-cozy-friends-server.md) for the gated
 runbook, edge settings, and rollback order.
 
+Username access is handled by the runbook's approval workflow: friends submit
+an exact Java username on the public guide, while the owner reviews requests
+at `cozy.popinvites.com/#admin` with a token held in SOPS. Requests persist in
+the private CloudNativePG database, and a token-authenticated in-cluster
+reconciler adds approved names to Minecraft through localhost-only RCON every
+60 seconds. The public API route uses the same-host site Ingress; its
+ClusterIP is internal for the site and whitelist sidecar. No publicly exposed
+API Service, RCON Service, or router exposure is allowed. See
+[Username approval and whitelist operations](docs/19-cozy-friends-server.md#14-username-approval-and-whitelist-operations)
+for secret rotation, rollout ordering, duplicate/status semantics, and
+troubleshooting without printing credentials.
+
 ## Why Talos?
 
 I originally considered Ubuntu Server with k3s, but decided to use Talos Linux because it gives the project a stronger infrastructure focus.

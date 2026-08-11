@@ -1,0 +1,18 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cozy-friends-approval-db
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-approval-db
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  instances: 1
+  storage:
+    storageClass: longhorn
+    size: 5Gi
+  bootstrap:
+    initdb:
+      database: cozy_friends_approval
+      owner: cozy_friends_approval

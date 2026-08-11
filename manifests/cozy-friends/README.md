@@ -59,18 +59,21 @@ reapplication without repeating the non-root startup proof.
 
 ## EULA and allowlist gate
 
-`configmap.yaml` intentionally sets `EULA=FALSE`. Do not change it to `TRUE`
-until the owner has explicitly accepted the Minecraft EULA. After acceptance,
-make the controlled configuration change and restart the StatefulSet according
-to the normal `OnDelete` procedure.
+The owner accepted the Minecraft EULA; `configmap.yaml` therefore sets
+`EULA=TRUE`. Keep that setting tied to the owner's acceptance and restart the
+single-replica StatefulSet only through the normal `OnDelete` procedure.
 
 Whitelist protection is enabled with both `ENABLE_WHITELIST=TRUE` and
-`ENFORCE_WHITELIST=TRUE`. Add the owner's and friends' exact, case-sensitive
-Java usernames through in-pod RCON only (for example, `rcon-cli whitelist add
-<username>` from the Minecraft container). The RCON password is supplied only
-from the SOPS Secret; never put it in a manifest, command history, or a Service.
-Keep the router closed until at least the owner is allowlisted and has joined
-from the LAN with the exact 1.3.7 client.
+`ENFORCE_WHITELIST=TRUE`. The non-root `whitelist-sync` sidecar polls the
+internal approval API every 60 seconds with the SOPS-provided
+`whitelist-sync-token` and adds each approved, validated Java username through
+localhost RCON. It only adds usernames; it never removes an entry, writes a
+Secret, or exposes RCON.
+Manual administration remains in-pod only (for example,
+`rcon-cli whitelist add <username>` from the Minecraft container). The RCON
+password is supplied only from the SOPS Secret; never put it in a manifest,
+command history, or a Service. Keep the router closed until at least the owner
+is allowlisted and has joined from the LAN with the exact 1.3.7 client.
 
 ## Secret boundary
 
@@ -80,6 +83,7 @@ inside the existing SOPS/age workflow, and apply the decrypted Secret locally
 before Argo synchronization:
 
 - `rcon-password`
+- `whitelist-sync-token`
 - `restic-password`
 - `restic-repository`
 - `s3-access-key-id`
@@ -91,15 +95,12 @@ from `kustomization.yaml`. Use a least-privilege S3 identity limited to the
 Restic repository. Never print, read back, commit, or send plaintext secret
 values through this repository workflow.
 
-## Candidate VIP and public edge gate
+## Verified VIP and public edge gate
 
-`service-gameplay.yaml` uses the LAN-verified candidate
-`10.0.0.254/32` in the MetalLB annotations. The router DHCP pool is
-`.2`–`.253`; `.254` was absent from the router lease page, ARP, and ping.
-The MetalLB chart is installed and ready, but the pool and Service remain
-unsynced until the WAN edge and remaining launch gates are complete. Confirm
-the cluster has a working MetalLB install and the Service has a ready local
-endpoint before opening the router.
+`service-gameplay.yaml` selects the LAN-validated MetalLB VIP
+`10.0.0.254/32`. The Service has a ready local endpoint, but the router WAN
+rule remains a separate launch gate. Before opening it, confirm the router
+reservation and the outside-network path.
 
 The only intended router rule is:
 

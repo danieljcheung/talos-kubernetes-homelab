@@ -113,13 +113,15 @@ The copyright terms permit private or public hosting, but do not permit republis
 
 ## 4. EULA, allowlist, and administration
 
-The intended initial server settings are:
+The live initial server settings are:
 
 ```text
-EULA=TRUE                         # only after explicit owner acceptance
+EULA=TRUE                         # owner accepted before startup
 TYPE=FABRIC
 VERSION=1.20.1
-SKIP_GENERIC_PACK_UPDATE_CHECK=true # pack-stager.sh owns verified ZIP staging
+# GENERIC_PACK is intentionally omitted from the runtime env; the non-root
+# stage-homestead-pack init container verifies/unpacks the private ZIP.
+SKIP_GENERIC_PACK_UPDATE_CHECK=true
 MEMORY=8G
 ONLINE_MODE=TRUE
 ENABLE_WHITELIST=TRUE
@@ -134,16 +136,23 @@ SIMULATION_DISTANCE=6
 MOTD=Cozy Friends Server | Homestead 1.3.7
 ```
 
-Do not copy a username from a display name or launcher nickname. Add the exact Java username supplied by the owner through localhost-only RCON after the secret exists, and keep the router rule closed until the owner can join locally:
+Submit the exact Java username through the public Cozy form. The owner reviews
+pending rows at `https://cozy.popinvites.com/#admin`; the in-cluster sidecar
+adds approved names through localhost-only RCON. Keep the router rule closed
+until the owner can join locally. Do not copy a username from a display name or
+launcher nickname.
+
+For a manual removal, use localhost-only RCON and verify the resulting list:
 
 ```bash
 kubectl -n cozy-friends exec homestead-0 -c minecraft -- \
-  rcon-cli whitelist add '<exact-case-sensitive-java-username>'
+  rcon-cli whitelist remove '<exact-case-sensitive-java-username>'
 kubectl -n cozy-friends exec homestead-0 -c minecraft -- \
   rcon-cli whitelist list
 ```
 
-Use the same command with `whitelist remove` when an allowlist entry must be withdrawn. Do not put a real username, RCON password, or secret output in this document. RCON has no Kubernetes Service and must not receive a router rule.
+Do not put a real username, RCON password, or secret output in this document.
+RCON has no Kubernetes Service and must not receive a router rule.
 
 ## 5. Build, ConfigMap sync, and GitOps delivery
 
@@ -389,3 +398,275 @@ helm list -A
 ```
 
 Record the DHCP pool and candidate-VIP evidence, verified WAN IPv4, CNI/kube-proxy findings, Prometheus selector/service-account findings, artifact byte count/digest, Argo/site status, restore evidence, external monitor state, and router/DNS changes in the operator's change record. This revision records the installed MetalLB chart and live companion guide; it does not claim that Minecraft public launch is complete.
+ 
+## 14. Username approval and whitelist operations
+
+The public guide and the Minecraft allowlist are connected by a separate,
+token-authenticated approval API. This workflow is intentionally additive to
+the existing server controls: `ONLINE_MODE=TRUE`, `ENABLE_WHITELIST=TRUE`, and
+`ENFORCE_WHITELIST=TRUE` remain required, and an approved submission is not a
+substitute for an exact Java username or for the launch gates above.
+
+### Public request and private decision flow
+
+The browser uses same-origin API paths on `https://cozy.popinvites.com`:
+
+| Operation | Request | Authentication | Meaning |
+| --- | --- | --- | --- |
+| Submit a username | `POST /api/usernames` with `{"username":"..."}` | None | Public form creates or reopens a request. |
+| List requests | `GET /api/admin/submissions` | `Authorization: Bearer <admin-token>` | Admin dashboard reads all submissions and timestamps. |
+| Approve | `POST /api/admin/submissions/{id}/approve` | Admin bearer token | Changes one pending row to `approved`. |
+| Reject | `POST /api/admin/submissions/{id}/reject` | Admin bearer token | Changes one pending row to `rejected`. |
+| Produce the allowlist feed | `GET /api/whitelist/approved.txt` | `Authorization: Bearer <sync-token>` | Returns approved usernames, one per line, for the in-cluster sync sidecar. |
+
+The public form is on the main page at `cozy.popinvites.com`. The token-gated
+operator page is `https://cozy.popinvites.com/#admin`; the `#admin` fragment
+selects the dashboard, while the token is entered into its password field and
+is not part of the URL. The API routes are sent through the same-host
+`/api` Ingress path to the internal
+`Service/cozy-friends-approval-api` on port `8080`. The API Service is
+ClusterIP-only: it is not a public or router-facing port. There is no RCON
+Service and no router rule for either RCON or the API.
+
+Use the dashboard to load requests, inspect the exact case-sensitive Java
+username, and act only on rows marked `pending`. A successful decision returns
+the updated row with its `decidedAt` timestamp. Do not copy the admin token
+into a URL, a shell command, a Git file, a ConfigMap, a browser bookmark, or
+chat. Do not use the admin token for the whitelist feed; the two bearer
+boundaries are intentionally separate.
+
+### Postgres state and duplicate behavior
+
+`Cluster/cozy-friends-approval-db` is a CloudNativePG-backed Postgres cluster
+in namespace `cozy-friends-site`, with the database and owner
+`cozy_friends_approval`. The API initializes the `username_submissions` table
+and its status index on startup. The generated application Secret is
+`cozy-friends-approval-db-app`; its `uri` key supplies the API
+`DATABASE_URL`. This database is the source of truth; the static site
+ConfigMap does not contain requests or approvals. It is a single CNPG
+instance on Longhorn, so persistence is not high availability; establish and
+preserve a tested database backup/restore path before production.
+
+Each row has an ID, the submitted spelling, a case-folded (case-insensitive)
+unique `username_key`, a status (`pending`, `approved`, or `rejected`), and
+submission/decision timestamps. The API trims the submitted value and accepts
+only 3–16 ASCII letters, digits, or underscores. Because uniqueness is on
+`username_key`, `DanBuilder`, `danbuilder`, and `DANBUILDER` refer to one
+submission rather than three accounts:
+
+1. A new valid name creates one `pending` row and returns `201`.
+2. Repeating a name with different casing returns the existing ID and current
+   status (`pending` or `approved`) with `200`; it does not create a
+   duplicate or reset an approval.
+3. Re-submitting a `rejected` name reuses that row, stores the newly supplied
+   spelling and timestamp, clears `decidedAt`, and returns it to `pending`.
+4. Approve/reject is allowed only while the row is `pending`. A missing ID is
+   `404`; trying to decide an already decided row is `409`.
+5. Only `approved` rows are emitted in `approved.txt`, ordered by the
+   case-folded key. Pending and rejected rows are never emitted.
+
+Rejecting a request therefore prevents future feed output, but the sync
+sidecar is deliberately additive and does not remove an already present
+Minecraft allowlist entry. If an already-approved player must lose access,
+reject the row and then remove the exact Java username through localhost-only
+RCON, followed by `whitelist list` verification:
+
+```bash
+kubectl -n cozy-friends exec homestead-0 -c minecraft -- \
+  rcon-cli whitelist remove '<exact-case-sensitive-java-username>'
+kubectl -n cozy-friends exec homestead-0 -c minecraft -- \
+  rcon-cli whitelist list
+```
+
+### Approved-feed and localhost-RCON reconciliation
+
+The non-root `whitelist-sync` sidecar in `homestead` polls
+`http://cozy-friends-approval-api.cozy-friends-site.svc.cluster.local:8080/api/whitelist/approved.txt`
+every 60 seconds. It sends the sync bearer token from the
+`whitelist-sync-token` Secret key, writes the response only to temporary
+storage, validates every line against `[A-Za-z0-9_]{3,16}`, and issues
+idempotent `rcon-cli whitelist add` commands to `127.0.0.1` only. It does not
+call the Kubernetes API and cannot reach a remote RCON endpoint.
+
+The feed is an authorization boundary, not a public download: a request
+without `Authorization: Bearer <sync-token>` receives `401`, and the token
+must not be placed in the URL. A successful fetch adds approved names; it
+does not replace the existing whitelist and never performs removals. Invalid
+lines are skipped while valid lines continue through the allow operation. A
+network error or non-success HTTP response makes no whitelist changes; an
+individual RCON add failure leaves that name unchanged. All such failures are
+retried on the next 60-second cycle, and an unavailable API or database never
+causes existing allowlist entries to be discarded.
+
+Check this path without printing credentials:
+
+```bash
+kubectl -n cozy-friends-site get deploy,pods,svc,endpointslice
+kubectl -n cozy-friends-site rollout status deployment/cozy-friends-approval-api --timeout=5m
+kubectl -n cozy-friends-site logs deployment/cozy-friends-approval-api --since=10m
+kubectl -n cozy-friends logs statefulset/homestead -c whitelist-sync --since=10m
+kubectl -n cozy-friends exec homestead-0 -c minecraft -- \
+  rcon-cli whitelist list
+```
+
+The API request logger intentionally omits authorization headers and request
+bodies. Treat all workload logs as sensitive operational output anyway: never
+add a token to a debug message or paste logs containing secret material into an
+issue or chat. Ingress-nginx logs can confirm the public `/api` route and
+status code; CNPG operator/database logs can distinguish database readiness
+from API readiness.
+
+### Encrypted Secret inventory and safe token handling
+
+These values are required, but must never be committed, logged, or copied into
+documentation. Handle them only in the trusted SOPS editor, Kubernetes Secret
+data, the API/sidecar process environment populated from those Secrets, or
+the dashboard's password field:
+
+| Secret object | Required key | Consumer |
+| --- | --- | --- |
+| `Secret/cozy-friends-approval-secrets` in `cozy-friends-site` | `admin-token` | API `APPROVAL_ADMIN_TOKEN` and the private dashboard operator |
+| `Secret/cozy-friends-approval-secrets` in `cozy-friends-site` | `sync-token` | API `APPROVAL_SYNC_TOKEN` |
+| `Secret/cozy-friends-secrets` in `cozy-friends` | `whitelist-sync-token` | The 60-second whitelist sidecar |
+| `Secret/cozy-friends-approval-db-app` in `cozy-friends-site` | CNPG-generated `uri` | API `DATABASE_URL` |
+
+`sync-token` and `whitelist-sync-token` MUST contain the same generated
+bearer value. Keep the existing RCON, Restic, repository, and S3 keys in
+`cozy-friends-secrets`; adding the sync key does not weaken those boundaries.
+The encrypted approval Secret is not a Kustomize plaintext resource and must
+not be replaced with an example value.
+
+Create or edit the encrypted approval and Minecraft Secret files in the
+trusted workstation's SOPS editor. Paste the admin token and one shared sync
+token directly into the corresponding encrypted fields; never display them
+with `sops --decrypt`, shell tracing, `kubectl get -o yaml`, JSONPath,
+`base64 -d`, `env`, or process listings. Apply only through a pipe, whose
+output should contain Kubernetes object metadata rather than values:
+
+```bash
+export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+sops --decrypt manifests/cozy-friends-site/cozy-friends-approval.secret.yaml | \
+  kubectl apply -f -
+sops --decrypt manifests/cozy-friends/cozy-friends.secret.yaml | \
+  kubectl apply -f -
+
+kubectl -n cozy-friends-site get secret cozy-friends-approval-secrets -o name
+kubectl -n cozy-friends get secret cozy-friends-secrets -o name
+```
+
+The operator may enter the admin token directly into the password field at
+`cozy.popinvites.com/#admin`; do not save it in browser autofill, screenshots,
+URL fragments, or clipboard history. For rotation, prepare a new admin token
+and one new shared sync token out of band, update both encrypted Secret keys,
+apply both SOPS files without printing them, then restart the API Deployment
+and the `homestead` pod so both consumers receive the same value. A brief
+retry window is safer than weakening authorization; verify API readiness and
+one successful sync cycle after rotation. Never rotate only one of the two
+sync-token copies.
+
+### First rollout and immutable hook ordering
+
+The first approval rollout is intentionally ordered so the API cannot start
+without its database or image and the Minecraft pod cannot mount an old hook:
+
+1. Apply the encrypted approval Secret and the updated encrypted
+   `cozy-friends-secrets` through the SOPS pipes above. Do not sync a
+   plaintext Secret through Argo.
+2. Create or update `Cluster/cozy-friends-approval-db` and wait for
+   `cozy-friends-approval-db-app` to be generated with its `uri` key and for
+   the CNPG readiness condition to be healthy. The metadata-only checks are:
+
+   ```bash
+   kubectl apply -f manifests/cozy-friends-site/approval-db.yaml
+   kubectl -n cozy-friends-site get cluster cozy-friends-approval-db -o name
+   kubectl -n cozy-friends-site get secret cozy-friends-approval-db-app -o name
+   ```
+
+3. Build and push the API image, then record its immutable digest before
+   updating `approval-api-deployment.yaml`:
+
+   ```bash
+   docker build -f cozy-approval-api/Dockerfile \
+     -t ghcr.io/danieljcheung/cozy-friends-approval-api:2026-08-10 .
+   docker push ghcr.io/danieljcheung/cozy-friends-approval-api:2026-08-10
+   ```
+
+   The committed Deployment currently uses
+   `ghcr.io/danieljcheung/cozy-friends-approval-api@sha256:0634a0c60a44a1e9bf48db0be1d6b226002efe3dbcd975b5e4b446a177930816`.
+   Never deploy a mutable tag or `latest`.
+4. Build/sync the generated Cozy site and sync
+   `cozy-friends-site` only after the image is available:
+
+   ```bash
+   make build-cozy
+   make sync-cozy
+   argocd app sync cozy-friends-site
+   argocd app wait cozy-friends-site --health --sync
+   ```
+
+   Confirm the API Deployment, API ClusterIP Service, Ingress route, CNPG
+   Cluster, and static site are all healthy before touching `homestead`.
+5. Recreate the immutable `homestead-backup-hooks` ConfigMap so the new
+   `whitelist-sync.sh` hook is mounted. An immutable ConfigMap cannot be
+   updated in place; use the committed manifest and verify the replacement
+   before restarting the server:
+
+   ```bash
+   kubectl -n cozy-friends delete configmap homestead-backup-hooks
+   kubectl apply -f manifests/cozy-friends/backup-hooks-configmap.yaml
+   kubectl -n cozy-friends get configmap homestead-backup-hooks -o name
+   ```
+
+6. Restart `homestead` only after the hook and both Secret consumers exist.
+   Because the StatefulSet uses `OnDelete`, perform a graceful, operator-
+   approved pod restart after a successful backup rather than assuming a
+   template change recreated it:
+
+   ```bash
+   kubectl -n cozy-friends delete pod homestead-0 --wait=true
+   kubectl -n cozy-friends wait --for=condition=ready pod/homestead-0 --timeout=15m
+   ```
+
+   Confirm the 240-second termination grace period, Minecraft readiness,
+   `whitelist-sync` startup, and the first successful 60-second reconciliation
+   before opening or retaining any WAN rule.
+
+Do not publish or push the official Homestead ZIP into the API image. The
+official pack remains private, outside Git and OCI registries, and is staged
+only through the verified pack workflow in Section 3. The API image must not
+contain usernames, tokens, RCON passwords, database credentials, or generated
+allowlist data.
+
+### Operational checks, monitoring, and security limits
+
+For a complete smoke check, submit one real exact Java username through the
+public form, load the dashboard with the SOPS-held admin token, approve it,
+wait for one 60-second cycle, and verify the username with localhost RCON.
+Verify a rejected request is absent from the next `approved.txt` response and
+remove any previously allowlisted rejected name manually as described above.
+Check status and readiness without secret output:
+
+```bash
+kubectl -n cozy-friends-site get cluster,pods,deploy,svc,networkpolicy
+kubectl -n cozy-friends get pods,networkpolicy
+kubectl -n cozy-friends logs homestead-0 -c whitelist-sync --since=15m
+kubectl -n ingress-nginx logs deploy/ingress-nginx-controller --since=15m
+```
+
+This approval feature adds no approval-specific `/metrics` endpoint,
+ServiceMonitor, or PrometheusRule. Existing Kubernetes workload/readiness
+and kube-state metrics remain the health signal for the site/API workloads,
+and existing CNPG operator metrics/alerts (where enabled) remain the database
+signal. The Minecraft backup textfile metrics and existing StatefulSet, PVC,
+site, DDNS, and external TCP/HTTPS monitor coverage are unchanged. Do not
+interpret the absence of a submission metric as proof that approvals or
+allowlist reconciliation are fresh; use API, CNPG, Ingress, and sidecar logs
+plus the RCON check above.
+
+The default-deny policies remain mandatory. The API may be reached only
+through the existing same-host Ingress path and its internal ClusterIP
+Service; it has no WAN listener or router forwarding. The Minecraft sidecar
+may call the API Service and `127.0.0.1:25575` only. Never create an RCON
+Service, expose `25575`, expose an API NodePort/LoadBalancer, or add a router
+rule for either service. Preserve the existing no-Kubernetes-API-access
+posture, non-root/RuntimeDefault settings, and dropped capabilities.

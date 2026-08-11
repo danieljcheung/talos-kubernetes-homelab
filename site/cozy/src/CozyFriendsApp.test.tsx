@@ -10,10 +10,24 @@ import {
   LAUNCHER_GUIDES,
   RESOURCE_LINKS,
   SERVER_ADDRESS,
+  USERNAME_REQUEST_FAILURE,
+  USERNAME_REQUEST_LABEL,
+  USERNAME_REQUEST_PLACEHOLDER,
+  USERNAME_REQUEST_SUCCESS,
+  USERNAME_REQUEST_VALIDATION,
   VERSION_LINE
 } from './content'
 
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+const fetchDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'fetch')
+
+function setFetch(fetchImplementation: typeof fetch) {
+  Object.defineProperty(globalThis, 'fetch', {
+    configurable: true,
+    writable: true,
+    value: fetchImplementation
+  })
+}
 
 function setClipboard(writeText: (value: string) => Promise<void>) {
   Object.defineProperty(navigator, 'clipboard', {
@@ -27,6 +41,11 @@ afterEach(() => {
     Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
   } else {
     Reflect.deleteProperty(navigator, 'clipboard')
+  }
+  if (fetchDescriptor) {
+    Object.defineProperty(globalThis, 'fetch', fetchDescriptor)
+  } else {
+    Reflect.deleteProperty(globalThis, 'fetch')
   }
 })
 
@@ -79,5 +98,67 @@ describe('Cozy Friends field guide', () => {
     })
 
     expect(screen.getByRole('button', { name: 'Copy failed. Select the address manually.' })).toBeInTheDocument()
+  })
+
+  test('shows the exact username label, help copy, and placeholder', () => {
+    render(<CozyFriendsApp />)
+
+    expect(screen.getByLabelText(USERNAME_REQUEST_LABEL)).toBeInTheDocument()
+    expect(screen.getByText(USERNAME_REQUEST_VALIDATION)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(USERNAME_REQUEST_PLACEHOLDER)).toBeInTheDocument()
+  })
+
+  test('posts a valid username as JSON and shows success feedback', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('{}', { status: 201, headers: { 'Content-Type': 'application/json' } })
+    )
+    setFetch(fetchMock)
+    render(<CozyFriendsApp />)
+
+    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), {
+      target: { value: 'CozyDan_' }
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/usernames', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'CozyDan_' })
+    })
+    expect(screen.getByRole('status')).toHaveTextContent(USERNAME_REQUEST_SUCCESS)
+  })
+
+  test('shows the request failure copy when the API rejects the submission', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response('', { status: 503 })
+    )
+    setFetch(fetchMock)
+    render(<CozyFriendsApp />)
+
+    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), {
+      target: { value: 'CozyDan_' }
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent(USERNAME_REQUEST_FAILURE)
+  })
+
+  test('shows network failure feedback when the request cannot reach the API', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockRejectedValue(new Error('Network unavailable'))
+    setFetch(fetchMock)
+    render(<CozyFriendsApp />)
+
+    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), {
+      target: { value: 'CozyDan_' }
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
+    })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Network unavailable')
   })
 })

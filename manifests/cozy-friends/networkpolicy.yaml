@@ -60,6 +60,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    # Whitelist synchronization may reach only the approval API pods.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cozy-friends-site
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cozy-friends-approval-api
+      ports:
+        - protocol: TCP
+          port: 8080
     # Public HTTPS is needed for authentication, Fabric downloads, and S3.
     # RFC1918 destinations remain denied, which also keeps the Kubernetes API
     # and other private cluster endpoints out of the workload's egress path.

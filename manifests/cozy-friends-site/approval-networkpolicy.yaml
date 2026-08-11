@@ -1,0 +1,121 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-approval-api-ingress
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-approval-api
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cozy-friends-approval-api
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cozy-friends
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: homestead
+              app.kubernetes.io/component: server
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-approval-api-egress
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-approval-api
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cozy-friends-approval-api
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              cnpg.io/cluster: cozy-friends-approval-db
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-approval-db-ingress
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-approval-db
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cozy-friends-approval-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cozy-friends-approval-api
+              app.kubernetes.io/component: api
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-approval-db-dns
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-approval-db
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: cozy-friends-approval-db
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

@@ -107,3 +107,42 @@ data:
     cp -R "${staging}/Homestead1.3.7/." "${data}/"
     rm -rf "${staging}"
     printf '%s\n' "${expected}" > "${marker}"
+  whitelist-sync.sh: |-
+    #!/bin/sh
+    set -u
+
+    api_url="${APPROVAL_API_URL:?APPROVAL_API_URL is required}"
+    sync_token="${APPROVAL_SYNC_TOKEN:?APPROVAL_SYNC_TOKEN is required}"
+    tmp_dir="${TMPDIR:-/tmp}/whitelist-sync"
+    mkdir -p "${tmp_dir}"
+    trap 'rm -rf "${tmp_dir}"' EXIT HUP INT TERM
+
+    while :; do
+      raw_file="${tmp_dir}/approved.raw"
+      valid_file="${tmp_dir}/approved.valid"
+      if curl --fail --silent --show-error \
+        --connect-timeout 5 --max-time 15 \
+        --header "Authorization: Bearer ${sync_token}" \
+        "${api_url}" > "${raw_file}"; then
+        : > "${valid_file}"
+        while IFS= read -r username || [ -n "${username}" ]; do
+          case "${username}" in
+            ''|*[!A-Za-z0-9_]*)
+              continue
+              ;;
+          esac
+          if [ "${#username}" -lt 3 ] || [ "${#username}" -gt 16 ]; then
+            continue
+          fi
+          printf '%s\n' "${username}" >> "${valid_file}"
+        done < "${raw_file}"
+
+        sort -u "${valid_file}" | while IFS= read -r username; do
+          [ -n "${username}" ] || continue
+          rcon-cli --host 127.0.0.1 --port 25575 \
+            whitelist add "${username}" >/dev/null 2>&1 || true
+        done
+      fi
+      rm -f "${raw_file}" "${valid_file}"
+      sleep 60
+    done

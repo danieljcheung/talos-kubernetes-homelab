@@ -3,7 +3,17 @@ export const HERO_EYEBROW = 'COZY FRIENDS SERVER'
 export const HERO_HEADING = 'Build slow. Wander far. Come home.'
 export const HERO_BODY = 'A shared Homestead world for cozy builds, big adventures, and good company.'
 export const VERSION_LINE = 'Homestead 1.3.7 • Minecraft 1.20.1 • Fabric • Java Edition'
-export const INVITE_NOTE = 'Invite-only. Ask Dan to add your exact Minecraft username before joining.'
+export const INVITE_NOTE = 'Invite-only. Send the exact Java username below; Dan approves friends before they join.'
+export const USERNAME_REQUEST_EYEBROW = 'JOIN THE CAMPFIRE'
+export const USERNAME_REQUEST_HEADING = 'Ask to join the world'
+export const USERNAME_REQUEST_BODY = 'Leave your exact Minecraft Java username and Dan will review it before adding you to the allowlist.'
+export const USERNAME_REQUEST_LABEL = 'Minecraft Java username'
+export const USERNAME_REQUEST_PLACEHOLDER = 'Your exact in-game name'
+export const USERNAME_REQUEST_SUBMIT = 'Request an allowlist spot'
+export const USERNAME_REQUEST_SUBMITTING = 'Sending request…'
+export const USERNAME_REQUEST_SUCCESS = 'Request received. Dan will review it before you join.'
+export const USERNAME_REQUEST_FAILURE = 'The request could not be sent. Try again in a moment.'
+export const USERNAME_REQUEST_VALIDATION = 'Use the exact Java username: 3–16 letters, numbers, or underscores.'
 
 export const OFFICIAL_LINKS = {
   modrinth: 'https://modrinth.com/modpack/homestead/version/WMsE2fOj',
@@ -37,7 +47,7 @@ export const CONNECTION_STEPS = [
   'Launch the Homestead 1.3.7 profile.',
   'Choose Multiplayer, then Add Server.',
   'Set the name to Cozy Friends Server and address to mc.popinvites.com.',
-  'Join after Dan confirms the allowlist entry.'
+  'Submit the username above, then join after Dan approves the allowlist entry.'
 ] as const
 
 export const COMMUNITY_LINE = 'Build with care. Ask before borrowing. Repair creeper damage. Keep shared paths usable. Leave room for everyone.'
@@ -54,7 +64,7 @@ export const TROUBLESHOOTING: readonly TroubleshootingItem[] = [
   },
   {
     label: 'Not whitelisted',
-    guidance: 'send Dan the exact case-sensitive Java username.'
+    guidance: 'Submit the exact case-sensitive Java username above, then wait for Dan to approve it.'
   },
   {
     label: 'Java/startup crash',

@@ -91,6 +91,26 @@ browser. Confirm that Cloudflare still resolves the hostname to its proxied
 addresses and that no private LAN address or credential is present in the
 rendered guide.
 
+## Username approval API
+
+The public guide posts exact Java usernames to the same-host `/api/usernames`
+route. The `/api` Ingress path targets the internal
+`Service/cozy-friends-approval-api` on port 8080; it is ClusterIP-only. The
+token-authenticated operator page is `https://cozy.popinvites.com/#admin`.
+
+Requests persist in the one-instance CloudNativePG
+`Cluster/cozy-friends-approval-db` on Longhorn. Apply the encrypted
+`cozy-friends-approval.secret.yaml` locally through SOPS; it is intentionally
+excluded from this Kustomization. The API also needs the runtime-only
+`ghcr-danieljcheung` image-pull Secret in this namespace because its GHCR
+package is private. Copy/apply that Secret through the trusted workstation
+workflow; never commit it or print its credentials.
+
+The `homestead` whitelist-sync sidecar fetches the approved feed with the
+shared sync token every 60 seconds and adds validated names through localhost
+RCON. No API Service, RCON Service, router rule, or approval-specific metrics
+endpoint is created for this workflow.
+
 ## Files
 
 - `namespace.yaml`: restricted application namespace

@@ -10,3 +10,7 @@ resources:
   - service.yaml
   - ingress.yaml
   - networkpolicy.yaml
+  - approval-db.yaml
+  - approval-api-deployment.yaml
+  - approval-api-service.yaml
+  - approval-networkpolicy.yaml
