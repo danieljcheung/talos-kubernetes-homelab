@@ -1,0 +1,35 @@
+import * as THREE from "three"
+import type { SoulMessage } from "./scene-types"
+
+const GLYPHS: Record<string, string[]> = {
+  A:["01110","10001","10001","11111","10001","10001","10001"], B:["11110","10001","10001","11110","10001","10001","11110"], C:["01111","10000","10000","10000","10000","10000","01111"], D:["11110","10001","10001","10001","10001","10001","11110"], E:["11111","10000","10000","11110","10000","10000","11111"], F:["11111","10000","10000","11110","10000","10000","10000"], G:["01111","10000","10000","10111","10001","10001","01111"], H:["10001","10001","10001","11111","10001","10001","10001"], I:["11111","00100","00100","00100","00100","00100","11111"], J:["00111","00010","00010","00010","10010","10010","01100"], K:["10001","10010","10100","11000","10100","10010","10001"], L:["10000","10000","10000","10000","10000","10000","11111"], M:["10001","11011","10101","10001","10001","10001","10001"], N:["10001","11001","10101","10011","10001","10001","10001"], O:["01110","10001","10001","10001","10001","10001","01110"], P:["11110","10001","10001","11110","10000","10000","10000"], Q:["01110","10001","10001","10001","10101","10010","01101"], R:["11110","10001","10001","11110","10100","10010","10001"], S:["01111","10000","10000","01110","00001","00001","11110"], T:["11111","00100","00100","00100","00100","00100","00100"], U:["10001","10001","10001","10001","10001","10001","01110"], V:["10001","10001","10001","10001","10001","01010","00100"], W:["10001","10001","10001","10101","10101","11011","10001"], X:["10001","10001","01010","00100","01010","10001","10001"], Y:["10001","10001","01010","00100","00100","00100","00100"], Z:["11111","00001","00010","00100","01000","10000","11111"], "'": ["00100","00100","00000","00000","00000","00000","00000"], " ": ["00000","00000","00000","00000","00000","00000","00000"], "-": ["00000","00000","00000","11111","00000","00000","00000"] }
+export function createSoulMessageTexture(message: SoulMessage | null): THREE.Texture {
+  const text = message?.visual?.toUpperCase() ?? ""
+  if (typeof document !== "undefined") {
+    const canvas = document.createElement("canvas")
+    canvas.width = 512; canvas.height = 256
+    const context = canvas.getContext("2d")
+    if (context) {
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.font = `600 ${text.length > 4 ? 90 : 128}px "Newsreader Variable", "Bricolage Grotesque", serif`
+      context.textAlign = "center"; context.textBaseline = "middle"
+      context.fillStyle = "#fff4c2"; context.shadowColor = "#ff7a18"; context.shadowBlur = 12
+      context.fillText(text, canvas.width / 2, canvas.height / 2)
+      const texture = new THREE.CanvasTexture(canvas)
+      texture.minFilter = THREE.LinearFilter; texture.magFilter = THREE.LinearFilter
+      return texture
+    }
+  }
+  const width = 128, height = 64, data = new Uint8Array(width * height * 4)
+  const scale = Math.max(1, Math.min(4, Math.floor((width - 8) / Math.max(1, text.length * 6))))
+  const ox = Math.floor((width - text.length * 6 * scale) / 2), oy = Math.floor((height - 7 * scale) / 2)
+  text.split("").forEach((char, ci) => { const glyph = GLYPHS[char] ?? GLYPHS.E; glyph.forEach((row, y) => row.split("").forEach((v, x) => { if (v !== "1") return; for (let sy=0; sy<scale; sy++) for (let sx=0; sx<scale; sx++) { const i=((oy+y*scale+sy)*width+ox+ci*6*scale+x*scale+sx)*4; data[i]=255; data[i+1]=255; data[i+2]=255; data[i+3]=255 } })) })
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat)
+  texture.needsUpdate = true; texture.minFilter = THREE.LinearFilter; texture.magFilter = THREE.LinearFilter
+  return texture
+}
+
+export const SOUL_VERTEX_SHADER = `varying vec3 vNormal; varying vec3 vWorld; varying vec2 vUv; uniform float uTime,uPress,uReducedMotion; uniform vec2 uPressPoint; void main(){ vec3 n=normalize(normal); float z=sqrt(max(0.0,1.0-dot(uPressPoint,uPressPoint))); vec3 pn=normalize(vec3(uPressPoint,z)); float f=1.0-smoothstep(0.0,.42,length(n-pn)); vec3 p=position-n*f*uPress*.20; p.y*=1.0-.04*uPress; float breath=sin(uTime*1.30899694)*.024*(1.0-uReducedMotion); p*=1.0+breath; vec4 w=modelMatrix*vec4(p,1.); vWorld=w.xyz; vNormal=normalize(mat3(modelMatrix)*n); vUv=n.xy*.5+.5; gl_Position=projectionMatrix*viewMatrix*w; }`
+export const SOUL_FRAGMENT_SHADER = `precision highp float; uniform float uTime,uAlpha,uLayer,uMessageProgress,uReducedMotion,uEssenceProgress,uContentProgress; uniform sampler2D uMessageFrom,uMessageTo; varying vec3 vNormal,vWorld; varying vec2 vUv; float hash(vec3 p){return fract(sin(dot(p,vec3(17.1,31.7,47.3)))*43758.5);} float noise(vec3 p){vec3 i=floor(p),f=fract(p); f=f*f*(3.-2.*f); return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);} float fbm(vec3 p){float s=0.,a=.5; for(int i=0;i<5;i++){s+=a*noise(p); p=p*2.03+vec3(7.1,3.7,1.9); a*=.5;} return s;} void main(){ vec3 V=normalize(cameraPosition-vWorld); float nd=max(dot(V,vNormal),0.); float rim=pow(1.-nd,2.8); float flow=uReducedMotion>0.5?0.:uTime*.12; vec3 q=vWorld*2.6; q+=vec3(fbm(q+flow),fbm(q.yzx-flow),fbm(q.zxy+flow))*.42; float n=fbm(q)+.35*fbm(q*2.7-vec3(flow)); float depth=pow(max(dot(vNormal,-V),0.),.7); float filament=pow(.5+.5*sin(n*24.+uTime*1.7+vWorld.y*9.+fbm(q*3.)*4.),8.); float filament2=pow(.5+.5*cos(n*13.-uTime*1.1+vWorld.x*13.),7.); vec3 c=mix(vec3(.16,.025,.004),vec3(.72,.18,.015),smoothstep(.18,.62,n)); c=mix(c,vec3(1.,.46,.035),smoothstep(.72,1.,n)); c+=vec3(1.,.23,.01)*(filament*.3+filament2*.18)*(0.3+depth); vec2 radial=vUv-.5; float radius=length(radial); float turbulence=fbm(vec3(radial*8.,flow)); float aperture=smoothstep(.78,1.,uMessageProgress)*(1.-smoothstep(.42,.78,radius+turbulence*.08)); float sweep=.5+.5*sin(uMessageProgress*10.-radius*18.+turbulence*5.); vec4 a=texture2D(uMessageFrom,vUv), b=texture2D(uMessageTo,vUv); float glyph=mix(a.a,b.a,smoothstep(0.,1.,uMessageProgress)); float reveal=glyph*aperture*(.55+.45*sweep); c+=vec3(1.,.3,.02)*aperture*(1.-glyph)*.18; c=mix(c,vec3(1.,.957,.761),reveal); vec3 edge=vec3(1.,.22,.015)*rim*(.35+filament*.9); c+=edge; float breakup=.55+.45*noise(vWorld*10.+flow); float alpha=uAlpha*(uLayer>0.5?rim*breakup:0.72+depth*.2+n*.16); gl_FragColor=vec4(c,alpha); }`
+
+export function createSoulMaterial(kind: "core" | "halo"): THREE.ShaderMaterial { return new THREE.ShaderMaterial({ vertexShader:SOUL_VERTEX_SHADER, fragmentShader:SOUL_FRAGMENT_SHADER, uniforms:{uTime:{value:0},uPress:{value:0},uPressPoint:{value:new THREE.Vector2()},uMessageProgress:{value:1},uReducedMotion:{value:0},uEssenceProgress:{value:0},uContentProgress:{value:0},uLayer:{value:kind==="halo"?1:0},uMessageFrom:{value:null},uMessageTo:{value:null},uAlpha:{value:kind==="halo"?.32:1}}, transparent:kind==="halo", depthWrite:kind==="core", side:kind==="halo"?THREE.BackSide:THREE.FrontSide, blending:kind==="halo"?THREE.AdditiveBlending:THREE.NormalBlending }) }

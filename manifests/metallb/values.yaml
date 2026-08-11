@@ -1,0 +1,62 @@
+# Values for the MetalLB Helm chart v0.16.1.
+# The chart is installed manually; Argo CD manages only manifests/metallb/config.
+
+prometheus:
+  # Permit the existing Prometheus service account to discover MetalLB endpoints.
+  rbacPrometheus: true
+  serviceAccount: kube-prometheus-stack-prometheus
+  namespace: monitoring
+  podMonitor:
+    enabled: false
+  serviceMonitor:
+    enabled: true
+    speaker:
+      additionalLabels:
+        release: kube-prometheus-stack
+    controller:
+      additionalLabels:
+        release: kube-prometheus-stack
+  prometheusRule:
+    enabled: true
+    additionalLabels:
+      release: kube-prometheus-stack
+    staleConfig:
+      enabled: true
+    configNotLoaded:
+      enabled: true
+    addressPoolExhausted:
+      enabled: true
+      excludePools: "^minecraft-public$"
+    addressPoolUsage:
+      enabled: true
+      excludePools: "^minecraft-public$"
+    # No BGP backend is installed, so a BGP-session alert is not applicable.
+    bgpSessionDown:
+      enabled: false
+
+controller:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+speaker:
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  frr:
+    enabled: false
+
+# Layer 2 is the only advertised mode for this homelab. Disable both FRR
+# backends so no BGP speaker or bundled frr-k8s chart is installed.
+frrk8s:
+  enabled: false

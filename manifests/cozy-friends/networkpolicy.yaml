@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: homestead-network-policy
+  namespace: cozy-friends
+  labels:
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: homestead
+      app.kubernetes.io/component: server
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: cozy-friends
+  labels:
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Gameplay is intentionally the only public application port.
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        - ipBlock:
+            cidr: ::/0
+      ports:
+        - protocol: TCP
+          port: 25565
+    # Prometheus may scrape the backup textfile sidecar only.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9100
+  egress:
+    # kube-dns is the only in-cluster egress dependency.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Public HTTPS is needed for authentication, Fabric downloads, and S3.
+    # RFC1918 destinations remain denied, which also keeps the Kubernetes API
+    # and other private cluster endpoints out of the workload's egress path.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+        - ipBlock:
+            cidr: ::/0
+            except:
+              - fc00::/7
+      ports:
+        - protocol: TCP
+          port: 443

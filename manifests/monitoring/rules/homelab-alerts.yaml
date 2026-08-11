@@ -1,37 +1,103 @@
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: homelab-alerts
-  namespace: monitoring
-  labels:
-    release: kube-prometheus-stack
+ name: homelab-alerts
+ namespace: monitoring
+ labels:
+  release: kube-prometheus-stack
 spec:
-  groups:
-    - name: homelab.rules
-      rules:
-        - alert: PodRestartingFrequently
-          expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
-          for: 5m
-          labels:
-            severity: warning
-          annotations:
-            summary: "Pod is restarting frequently"
-            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted more than 3 times in 15 minutes."
+ groups:
+ - name: homelab.rules
+   rules:
+   - alert: PodRestartingFrequently
+     expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+     for: 5m
+     labels:
+      severity: warning
+     annotations:
+      summary: "Pod is restarting frequently"
+      description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted more than 3 times in 15 minutes."
 
-        - alert: NginxSitePodDown
-          expr: kube_deployment_status_replicas_available{namespace="default", deployment="nginx"} < 1
-          for: 2m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Personal site nginx pod is down"
-            description: "The nginx deployment serving danieljcheung.com has no available replicas."
+   - alert: NginxSitePodDown
+     expr: kube_deployment_status_replicas_available{namespace="default", deployment="nginx"} < 1
+     for: 2m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Personal site nginx pod is down"
+      description: "The nginx deployment serving danieljcheung.com has no available replicas."
 
-        - alert: CloudflaredDown
-          expr: kube_deployment_status_replicas_available{namespace="cloudflare", deployment="cloudflared"} < 1
-          for: 1m
-          labels:
-            severity: critical
-          annotations:
-            summary: "Cloudflare Tunnel is down"
-            description: "The cloudflared deployment has no available replicas. Public site access is likely down."
+   - alert: CloudflaredDown
+     expr: kube_deployment_status_replicas_available{namespace="cloudflare", deployment="cloudflared"} < 1
+     for: 1m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Cloudflare Tunnel is down"
+      description: "The cloudflared deployment has no available replicas. Public site access is likely down."
+
+   - alert: MinecraftStatefulSetUnavailable
+     expr: kube_statefulset_status_replicas_ready{namespace="cozy-friends", statefulset="homestead"} < 1
+     for: 5m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Minecraft StatefulSet is unavailable"
+      description: "The cozy-friends/homestead StatefulSet has no ready replicas. Minecraft clients cannot join."
+
+   - alert: CozyFriendsSiteUnavailable
+     expr: kube_deployment_status_replicas_available{namespace="cozy-friends-site", deployment="cozy-friends-site"} < 1
+     for: 2m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Cozy Friends site is unavailable"
+      description: "The cozy-friends-site deployment has no available replicas. The public friend guide may be down."
+
+   - alert: CloudflareDdnsUnavailable
+     expr: kube_deployment_status_replicas_available{namespace="cloudflare-ddns", deployment="cloudflare-ddns"} < 1
+     for: 10m
+     labels:
+      severity: warning
+     annotations:
+      summary: "Cloudflare DDNS updater is unavailable"
+      description: "The cloudflare-ddns deployment has no available replicas. mc.popinvites.com may become stale after a WAN address change."
+
+   - alert: MinecraftWorldPVCLowFreeSpace
+     expr: >-
+      kubelet_volume_stats_available_bytes{namespace="cozy-friends", persistentvolumeclaim="data-homestead-0"}
+      / on(namespace, persistentvolumeclaim)
+      kubelet_volume_stats_capacity_bytes{namespace="cozy-friends", persistentvolumeclaim="data-homestead-0"} < 0.15
+     for: 15m
+     labels:
+      severity: warning
+     annotations:
+      summary: "Minecraft world PVC has low free space"
+      description: "The cozy-friends/data-homestead-0 world volume has less than 15% free space."
+
+   - alert: MinecraftBackupFailed
+     expr: minecraft_backup_last_exit_code{namespace="cozy-friends"} != 0
+     for: 5m
+     labels:
+      severity: warning
+     annotations:
+      summary: "Minecraft backup failed"
+      description: "The latest Cozy Friends backup attempt reported a non-zero exit code."
+
+   - alert: MinecraftBackupSuccessMetricAbsent
+     expr: absent_over_time(minecraft_backup_last_success_timestamp_seconds{namespace="cozy-friends"}[30h])
+     for: 10m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Minecraft backup success metric is absent"
+      description: "No successful Cozy Friends backup timestamp has been observed for 30 hours."
+
+   - alert: MinecraftBackupStale
+     expr: time() - minecraft_backup_last_success_timestamp_seconds{namespace="cozy-friends"} > 108000
+     for: 10m
+     labels:
+      severity: critical
+     annotations:
+      summary: "Minecraft backup is stale"
+      description: "The latest successful Cozy Friends backup is more than 30 hours old."

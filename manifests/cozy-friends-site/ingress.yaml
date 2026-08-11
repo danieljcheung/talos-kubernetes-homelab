@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cozy-friends-site
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-site
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: cozy.popinvites.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cozy-friends-site
+                port:
+                  number: 80

@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-site
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-nginx
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-site
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cozy-friends-site
+      app.kubernetes.io/component: web
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: homestead-backup-metrics
+  namespace: cozy-friends
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homestead
+      app.kubernetes.io/component: backup-metrics
+  endpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s

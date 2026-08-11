@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudflare-ddns
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danieljcheung/talos-kubernetes-homelab.git
+    targetRevision: HEAD
+    path: manifests/cloudflare-ddns
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloudflare-ddns
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

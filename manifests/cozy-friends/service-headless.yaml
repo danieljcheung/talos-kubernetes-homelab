@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: homestead-headless
+  namespace: cozy-friends
+  labels:
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/part-of: cozy-friends
+    app.kubernetes.io/component: server
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/component: server
+  ports:
+    - name: minecraft
+      protocol: TCP
+      port: 25565
+      targetPort: minecraft

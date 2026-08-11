@@ -17,3 +17,7 @@ manifests/monitoring/public-site-alerts.yaml
 age-key.txt
 keys.txt
 *.agekey
+
+site/node_modules/
+site/dist/
+site/dist-cozy/

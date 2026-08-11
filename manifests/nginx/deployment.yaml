@@ -30,8 +30,11 @@ spec:
               mountPath: /usr/share/nginx/html/index.html
               subPath: index.html
             - name: landing-page
-              mountPath: /usr/share/nginx/html/styles.css
-              subPath: styles.css
+              mountPath: /usr/share/nginx/html/assets/app.js
+              subPath: app.js
+            - name: landing-page
+              mountPath: /usr/share/nginx/html/assets/app.css
+              subPath: app.css
             - name: landing-page
               mountPath: /usr/share/nginx/html/Daniel_Cheung_Final_Resume.pdf
               subPath: Daniel_Cheung_Final_Resume.pdf

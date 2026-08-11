@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cozy-friends-site
+  namespace: cozy-friends-site
+  labels:
+    app.kubernetes.io/name: cozy-friends-site
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: cozy-friends
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cozy-friends-site
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP

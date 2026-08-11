@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cozy-friends
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/danieljcheung/talos-kubernetes-homelab.git
+    targetRevision: HEAD
+    path: manifests/cozy-friends
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cozy-friends
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homestead-backup-hooks
+  namespace: cozy-friends
+  labels:
+    app.kubernetes.io/name: homestead
+    app.kubernetes.io/part-of: cozy-friends
+    app.kubernetes.io/component: backup
+immutable: true
+data:
+  post-backup.sh: |-
+    #!/bin/sh
+    set -eu
+
+    metrics_dir="${METRICS_DIR:-/metrics}"
+    exit_code="${1:-1}"
+
+    case "${exit_code}" in
+      ''|*[!0-9]*) exit_code=1 ;;
+    esac
+
+    write_metric() {
+      destination="$1"
+      temporary="${destination}.$$"
+      shift
+      {
+        printf '%s\n' "$@"
+      } > "${temporary}"
+      chmod 0644 "${temporary}"
+      mv -f "${temporary}" "${destination}"
+    }
+
+    write_metric "${metrics_dir}/minecraft-backup-exit.prom" \
+      "# HELP minecraft_backup_last_exit_code Exit code from the most recent Restic backup attempt." \
+      "# TYPE minecraft_backup_last_exit_code gauge" \
+      "minecraft_backup_last_exit_code ${exit_code}"
+
+    if [ "${exit_code}" -eq 0 ]; then
+      write_metric "${metrics_dir}/minecraft-backup-success.prom" \
+        "# HELP minecraft_backup_last_success_timestamp_seconds Unix timestamp of the most recent successful Restic backup." \
+        "# TYPE minecraft_backup_last_success_timestamp_seconds gauge" \
+        "minecraft_backup_last_success_timestamp_seconds $(date +%s)"
+    fi
+
+  backup-scheduler.sh: |-
+    #!/bin/sh
+    set -u
+
+    # mc-backup's built-in crond requires root. Keep this pod restricted and
+    # schedule the same UTC 03:00 run by invoking its one-shot mode instead.
+    while :; do
+      now="$(date -u +%s)"
+      day_start=$((now / 86400 * 86400))
+      next_run=$((day_start + 10800))
+      if [ "${next_run}" -le "${now}" ]; then
+        next_run=$((next_run + 86400))
+      fi
+      sleep_seconds=$((next_run - now))
+      sleep "${sleep_seconds}"
+      /usr/bin/backup now || :
+    done
+  pack-stager.sh: |-
+    #!/bin/sh
+    set -eu
+
+    pack="/pack/Homestead-1.3.7-server-pack.zip"
+    data="/data"
+    staging="${data}/.cozy-pack-staging"
+    marker="${data}/.cozy-pack-sha256"
+    expected="${PACK_SHA256:?PACK_SHA256 is required}"
+
+    actual="$(sha256sum "${pack}" | cut -d ' ' -f 1)"
+    if [ "${actual}" != "${expected}" ]; then
+      printf 'Homestead pack checksum mismatch: expected %s, got %s\n' "${expected}" "${actual}" >&2
+      exit 1
+    fi
+
+    if [ -f "${marker}" ] && [ "$(cat "${marker}")" = "${expected}" ]; then
+      exit 0
+    fi
+
+    rm -rf "${staging}"
+    mkdir -p "${staging}"
+
+    # BusyBox unzip preserves the pack's read-only directory modes. Stream
+    entries="${staging}/.entries"
+    unzip -l "${pack}" |
+      awk 'NR >= 4 && $1 ~ /^[0-9]+$/ { print substr($0, index($0, $4)) }' > "${entries}"
+    while IFS= read -r entry; do
+      case "${entry}" in
+        Homestead1.3.7/|Homestead1.3.7/*/)
+          mkdir -p "${staging}/${entry}"
+          ;;
+        Homestead1.3.7/*)
+          mkdir -p "${staging}/$(dirname "${entry}")"
+          escaped="$(printf '%s' "${entry}" | sed 's/\[/__LBRACKET__/g; s/\]/__RBRACKET__/g' | sed 's/__LBRACKET__/\\[/g; s/__RBRACKET__/\\]/g')"
+          unzip -p "${pack}" "${escaped}" > "${staging}/${entry}" ||
+            { printf 'Unable to extract %s\n' "${entry}" >&2; exit 1; }
+          chmod u+rw "${staging}/${entry}"
+          ;;
+      esac
+    done < "${entries}"
+    rm -f "${entries}"
+
+    chmod -R u+rwX "${staging}"
+    cp -R "${staging}/Homestead1.3.7/." "${data}/"
+    chmod -R u+rwX "${data}"
+    rm -rf "${staging}"
+    printf '%s\n' "${expected}" > "${marker}"

@@ -138,3 +138,36 @@ flowchart TB
 - Secrets are encrypted in Git with SOPS and applied from the trusted admin machine for now.
 - Longhorn provides persistent volumes and external AWS S3 backups, but the current two-node setup is still not a fully highly available storage/control-plane design.
 - The cluster currently uses one control-plane node and one worker node. This is cleaner than two control-plane nodes because etcd HA should use three control-plane members.
+## Planned Cozy Friends public paths (gated)
+
+The planned Homestead 1.3.7 hosting design adds two intentionally different
+routes under `popinvites.com`:
+
+```text
+Minecraft Java
+  -> mc.popinvites.com explicit DNS-only A record
+  -> home WAN IPv4 -> router TCP 25565
+  -> MetalLB Layer 2 VIP 10.0.0.32/32 (candidate)
+  -> cozy-friends/homestead gameplay Service
+
+Web browser
+  -> proxied *.popinvites.com wildcard
+  -> existing Cloudflare Tunnel -> ingress-nginx
+  -> Host: cozy.popinvites.com
+  -> cozy-friends-site Service
+```
+
+The `mc` record must be gray-cloud/DNS-only; `cozy` remains covered by the
+existing proxied wildcard. No second Tunnel, RCON Service, UDP forwarding, or
+Cloudflare Access policy is part of this design. The candidate VIP is not
+router-verified, so this is a planned route rather than deployment evidence.
+Public launch remains gated by the verified LAN/DHCP/WAN path, explicit EULA
+acceptance, allowlist usernames, local secrets, client smoke test, backup
+restore, and outside-network monitors.
+
+The Minecraft world uses one StatefulSet replica and Longhorn replica count 1.
+That combination is persistent storage, not high availability: a node or disk
+failure can still require restore. Application-aware Restic backups are the
+primary recovery artifact; Longhorn snapshots and external backups are
+secondary disaster recovery. The [Cozy Friends Server runbook](19-cozy-friends-server.md)
+covers operations and rollback.

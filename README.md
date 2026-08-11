@@ -101,6 +101,31 @@ flowchart TB
 ```
 
 See [Architecture](docs/14-architecture.md) for the larger system context and cluster container view.
+## Planned Cozy Friends routes (gated)
+
+The repository contains a runbook and manifests for a planned Homestead 1.3.7
+server, but this is not a deployment claim. Public launch remains blocked until
+the Kubernetes, router, WAN, Cloudflare, EULA, secret, client, backup-restore,
+and outside-network monitor gates are proven. The candidate MetalLB VIP
+`10.0.0.32/32` is not router-verified.
+
+```text
+Minecraft Java -> DNS-only mc.popinvites.com -> home WAN IPv4
+               -> router TCP 25565 -> MetalLB VIP -> Cozy Friends Service
+
+Browser -> proxied *.popinvites.com -> existing Cloudflare Tunnel
+        -> ingress-nginx -> cozy.popinvites.com Ingress -> Cozy guide Service
+```
+
+`mc.popinvites.com` must remain an explicit gray-cloud/DNS-only record. The
+`cozy.popinvites.com` guide remains behind the existing proxied wildcard; no
+second tunnel or Access policy is planned. Longhorn's replica count 1 provides
+persistent storage, not high availability. Application-aware Restic backups
+are the primary recovery path, with Longhorn snapshots/backups as secondary
+disaster recovery.
+
+See [Cozy Friends Server](docs/19-cozy-friends-server.md) for the gated
+runbook, edge settings, and rollback order.
 
 ## Why Talos?
 
@@ -145,6 +170,7 @@ High-level process:
 - [Private Access with Tailscale](docs/07-tailscale-private-access.md)
 - [Kubernetes Dashboards](docs/08-kubernetes-dashboards.md)
 - [Personal Website and Cloudflare Tunnel](docs/09-personal-site-cloudflare.md)
+- [Cozy Friends Server Runbook](docs/19-cozy-friends-server.md)
 - [Kubernetes Operations Lessons](docs/10-kubernetes-operations-lessons.md)
 - [Observability Stack](docs/11-observability-stack.md)
 - [SOPS Secrets Workflow](docs/12-sops-secrets-workflow.md)
