@@ -18,6 +18,7 @@ verify: ## Verify ConfigMap matches built assets (checks if stale)
 
 build-cozy: ## Build the Cozy Friends companion site
 	@test -n "$${VITE_TURNSTILE_SITE_KEY:-}" || (echo "VITE_TURNSTILE_SITE_KEY must be set before building Cozy Friends." >&2; exit 1)
+	@case "$${VITE_TURNSTILE_SITE_KEY}" in *-TEST) echo "VITE_TURNSTILE_SITE_KEY must be a registered production widget key, not a Turnstile test key." >&2; exit 1;; esac
 	@VITE_COZY_ASSET_VERSION=$$(git rev-parse --short HEAD) npm --prefix site run build:cozy
 
 sync-cozy: ## Sync Cozy Friends assets to its ConfigMap

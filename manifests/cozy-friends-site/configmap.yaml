@@ -18,8 +18,8 @@ data:
         <meta name="description" content="A field guide for joining the Cozy Friends Homestead 1.3.7 Minecraft server." />
         <meta name="theme-color" content="#f4edda" />
         <title>Cozy Friends Server | Homestead 1.3.7</title>
-        <script type="module" crossorigin src="/assets/app.js?v=ba6a029"></script>
-        <link rel="stylesheet" crossorigin href="/assets/app.css?v=ba6a029">
+        <script type="module" crossorigin src="/assets/app.js?v=ec76211"></script>
+        <link rel="stylesheet" crossorigin href="/assets/app.css?v=ec76211">
       </head>
       <body>
         <div id="root"></div>
