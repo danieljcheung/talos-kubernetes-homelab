@@ -128,6 +128,15 @@ describe('Cozy Friends field guide', () => {
     expect(heroImage).toHaveAttribute('src', '/assets/cozy-hero.webp')
     expect(heroImage).toHaveAttribute('alt', '')
     expect(heroImage).toHaveAttribute('aria-hidden', 'true')
+    const saplingMarks = document.querySelectorAll<HTMLImageElement>(
+      '.wordmark__mark, .hero-action__icon, .join-heading__mark'
+    )
+    expect(saplingMarks).toHaveLength(4)
+    for (const mark of saplingMarks) {
+      expect(mark).toHaveAttribute('src', '/assets/cozy-sapling.webp')
+      expect(mark).toHaveAttribute('alt', '')
+      expect(mark).toHaveAttribute('aria-hidden', 'true')
+    }
 
     const countdownHeading = screen.getByRole('heading', { name: COUNTDOWN_HEADING })
     const countdownSection = countdownHeading.closest('section')

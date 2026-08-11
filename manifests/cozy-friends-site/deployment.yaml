@@ -102,6 +102,8 @@ spec:
                 path: assets/cozy-download.webp
               - key: cozy-hero.webp
                 path: assets/cozy-hero.webp
+              - key: cozy-sapling.webp
+                path: assets/cozy-sapling.webp
               - key: cozy-user.webp
                 path: assets/cozy-user.webp
         - name: nginx-cache

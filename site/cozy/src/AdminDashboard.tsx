@@ -80,7 +80,7 @@ export function AdminDashboard() {
     <div className="cozy-site">
       <main className="admin-page page-frame" id="main-content">
         <a className="wordmark admin-page__wordmark" href="/" aria-label="Cozy Friends home">
-          <span className="wordmark__mark" aria-hidden="true">CF</span>
+          <img className="wordmark__mark" src="/assets/cozy-sapling.webp" alt="" aria-hidden="true" />
           <span>Cozy Friends</span>
         </a>
         <p className="eyebrow">PRIVATE FIELD NOTES</p>

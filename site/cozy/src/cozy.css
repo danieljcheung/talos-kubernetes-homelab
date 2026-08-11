@@ -1,10 +1,10 @@
 :root {
   color: #30382a;
-  background: #f6f3ee;
+  background: #fcf3e2;
   font-family: "Avenir Next", Avenir, "Segoe UI", system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --cream: #f6f3ee;
+  --cream: #fcf3e2;
   --cream-deep: #efede5;
   --ink: #30382a;
   --olive: #65764c;
@@ -16,7 +16,7 @@
   --sky: #cdd9d2;
   --line: rgba(66, 77, 47, 0.2);
   --soft-line: rgba(66, 77, 47, 0.12);
-  --hero-scrim: rgba(246, 243, 238, 0.92);
+  --hero-scrim: rgba(252, 243, 226, 0.92);
   --hero-shadow: rgba(66, 77, 47, 0.12);
   --frame: 1180px;
   --pixel: "Courier New", "SFMono-Regular", Consolas, monospace;
@@ -161,44 +161,12 @@ code:focus-visible {
 }
 
 .wordmark__mark {
-  position: relative;
-  display: inline-block;
+  display: block;
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
-}
-
-.wordmark__leaf {
-  position: absolute;
-  display: block;
-  width: 13px;
-  height: 28px;
-  border-radius: 14px 14px 3px 14px;
-  background: var(--olive);
-  transform: rotate(38deg);
-}
-
-.wordmark__leaf--left {
-  top: 9px;
-  left: 7px;
-}
-
-.wordmark__leaf--right {
-  top: 0;
-  left: 21px;
-  background: var(--sage);
-  transform: rotate(38deg) scale(0.88);
-}
-
-.wordmark__mark::after {
-  position: absolute;
-  top: 11px;
-  left: 20px;
-  width: 4px;
-  height: 31px;
-  background: var(--olive-dark);
-  content: "";
-  transform: rotate(38deg);
+  object-fit: contain;
+  object-position: center;
 }
 
 .wordmark__details,
@@ -349,37 +317,11 @@ code:focus-visible {
 }
 
 .hero-action__icon {
-  position: relative;
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  color: currentColor;
-  font-size: 0;
-}
-
-.hero-action__icon::before,
-.hero-action__icon::after {
-  position: absolute;
   display: block;
-  background: currentColor;
-  content: "";
-}
-
-.hero-action__icon::before {
-  top: 4px;
-  left: 8px;
-  width: 7px;
-  height: 14px;
-  box-shadow: -7px 7px 0 currentColor;
-  transform: rotate(38deg);
-}
-
-.hero-action__icon::after {
-  top: 5px;
-  left: 10px;
-  width: 3px;
-  height: 17px;
-  transform: rotate(38deg);
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  object-fit: contain;
 }
 
 .hero-action__arrow {
@@ -529,36 +471,11 @@ code:focus-visible {
 }
 
 .join-heading__mark {
-  position: relative;
   display: block;
-  width: 24px;
-  height: 25px;
-}
-
-.join-heading__mark::before,
-.join-heading__mark::after {
-  position: absolute;
-  display: block;
-  background: var(--olive);
-  content: "";
-}
-
-.join-heading__mark::before {
-  top: 5px;
-  left: 10px;
-  width: 7px;
-  height: 17px;
-  box-shadow: -7px 7px 0 var(--olive);
-  transform: rotate(38deg);
-}
-
-.join-heading__mark::after {
-  top: 5px;
-  left: 11px;
-  width: 3px;
-  height: 20px;
-  background: var(--olive-dark);
-  transform: rotate(38deg);
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  object-position: center;
 }
 
 .join-heading h2 {

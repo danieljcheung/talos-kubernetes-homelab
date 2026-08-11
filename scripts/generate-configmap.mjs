@@ -20,6 +20,7 @@ export const COZY_BINARY_ASSET_NAMES = Object.freeze([
   'cozy-connect.webp',
   'cozy-download.webp',
   'cozy-hero.webp',
+  'cozy-sapling.webp',
   'cozy-user.webp'
 ]);
 

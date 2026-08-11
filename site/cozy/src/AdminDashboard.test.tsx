@@ -46,6 +46,10 @@ describe('Admin dashboard', () => {
       }))
     setFetch(fetchMock)
     render(<AdminDashboard />)
+    const saplingMark = document.querySelector<HTMLImageElement>('.admin-page__wordmark .wordmark__mark')
+    expect(saplingMark).toHaveAttribute('src', '/assets/cozy-sapling.webp')
+    expect(saplingMark).toHaveAttribute('alt', '')
+    expect(saplingMark).toHaveAttribute('aria-hidden', 'true')
 
     fireEvent.change(screen.getByLabelText('Admin token'), {
       target: { value: 'field-notes-token' }

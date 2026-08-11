@@ -48,14 +48,18 @@ chat.
 - `app.js` from `site/dist-cozy/assets/app.js`
 - `app.css` from `site/dist-cozy/assets/app.css`
 
-The Cozy-only `binaryData` section must contain exactly these five keys, encoded
+The Cozy-only `binaryData` section must contain exactly these six keys, encoded
 from the corresponding files in `site/dist-cozy/assets`:
 
 - `cozy-calendar.webp`
 - `cozy-connect.webp`
 - `cozy-download.webp`
 - `cozy-hero.webp`
+- `cozy-sapling.webp`
 - `cozy-user.webp`
+
+The sprite backgrounds use the site's `#fcf3e2` field color; the sapling also
+has transparent edges so the same mark can sit inside the olive launch button.
 
 The Deployment projects each binary key to `/usr/share/nginx/html/assets/<key>`,
 which is the public `/assets/<key>` URL. Do not add placeholders or manually
@@ -63,7 +67,7 @@ edit encoded values. The generator fails when a fixed asset is missing or an
 unexpected build asset would otherwise be omitted.
 
 The committed ConfigMap can remain without binary entries until the first
-complete build, but the workload is not ready to sync until all five WebP files
+complete build, but the workload is not ready to sync until all six WebP files
 exist and the generator has run:
 
 ```bash

@@ -392,6 +392,7 @@ const JOIN_ICON_ASSETS = {
   user: '/assets/cozy-user.webp',
   connect: '/assets/cozy-connect.webp'
 } as const
+const SAPLING_ASSET = '/assets/cozy-sapling.webp'
 
 function FieldGuideArt() {
   return (
@@ -448,10 +449,7 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
       <header className="site-header" role="banner">
         <div className="page-frame site-header__inner">
           <a className="wordmark" href="#welcome" aria-label="Cozy Friends home">
-            <span className="wordmark__mark" aria-hidden="true">
-              <span className="wordmark__leaf wordmark__leaf--left" />
-              <span className="wordmark__leaf wordmark__leaf--right" />
-            </span>
+            <img className="wordmark__mark" src={SAPLING_ASSET} alt="" aria-hidden="true" />
             <span className="wordmark__details">
               <span className="wordmark__name">cozy friends</span>
               <span className="wordmark__subtitle">A MINECRAFT SERVER</span>
@@ -477,7 +475,7 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
               </div>
               <div className="hero-actions">
                 <a className="hero-primary" href="#request">
-                  <span className="hero-action__icon" aria-hidden="true">+</span>
+                  <img className="hero-action__icon" src={SAPLING_ASSET} alt="" aria-hidden="true" />
                   JOIN COZY FRIENDS
                 </a>
                 <a className="hero-secondary" href="#about">
@@ -495,7 +493,7 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
         <section className="join-band ruled-band" id="join" aria-labelledby="join-heading">
           <div className="page-frame">
             <div className="join-heading">
-              <span className="join-heading__mark" aria-hidden="true" />
+              <img className="join-heading__mark" src={SAPLING_ASSET} alt="" aria-hidden="true" />
               <h2 id="join-heading">{JOIN_HEADING}</h2>
             </div>
             <ol className="join-steps">
@@ -572,10 +570,7 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
       <footer className="site-footer">
         <div className="page-frame site-footer__inner">
           <div className="footer-brand">
-            <span className="wordmark__mark" aria-hidden="true">
-              <span className="wordmark__leaf wordmark__leaf--left" />
-              <span className="wordmark__leaf wordmark__leaf--right" />
-            </span>
+            <img className="wordmark__mark" src={SAPLING_ASSET} alt="" aria-hidden="true" />
             <span className="footer-brand__details">
               <span className="footer-brand__name">cozy friends</span>
               <span className="footer-brand__subtitle">A MINECRAFT SERVER</span>
