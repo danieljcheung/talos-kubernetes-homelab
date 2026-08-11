@@ -52,6 +52,14 @@ valid, Kustomize-compatible ConfigMap before the first build. Do not sync this
 empty placeholder as the public site. Build and synchronize the ConfigMap before
 creating or syncing the Argo application:
 
+Export the public Turnstile browser key before building. `make build-cozy`
+versions the asset URLs from the current Git revision, which prevents the
+Cloudflare edge from serving a previous bundle after a deploy:
+
+```bash
+export VITE_TURNSTILE_SITE_KEY='<public site key from the Turnstile widget>'
+```
+
 ```bash
 make build-cozy
 make sync-cozy

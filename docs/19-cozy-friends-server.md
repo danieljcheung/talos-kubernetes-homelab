@@ -201,6 +201,15 @@ RCON has no Kubernetes Service and must not receive a router rule.
 ## 5. Build, ConfigMap sync, and GitOps delivery
 
 The companion site is a separate Vite target under `site/cozy`; it does not alter portfolio routing or import portfolio-only rendering code. Build the generated ConfigMap before syncing the site Application:
+Before the build, export the public browser key in the trusted build
+environment; the Make target also versions the static asset URLs from the
+current Git revision so Cloudflare cannot serve an older JavaScript bundle
+after a launch update:
+
+```bash
+export VITE_TURNSTILE_SITE_KEY='<public site key from the Turnstile widget>'
+```
+
 
 ```bash
 make build-cozy
