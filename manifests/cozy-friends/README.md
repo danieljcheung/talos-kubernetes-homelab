@@ -1,9 +1,30 @@
 # Cozy Friends Server
 
 This directory deploys one **Homestead 1.3.7** Minecraft Java server in the
-`cozy-friends` namespace. It is intentionally gated: these manifests describe
-the desired workload, but they do not prove that the LAN VIP, router, WAN, pack,
-credentials, or client are ready.
+`cozy-friends` namespace. It is intentionally gated: current evidence covers
+the MetalLB VIP/pool, ready local endpoint, owner EULA acceptance, and
+encrypted Secret contracts, but does not claim that a public Minecraft client,
+WAN router rule, backup restore, or external monitor has been proven.
+
+## Public guide and launch promise
+
+The companion guide promises a shared Homestead world for **chilling,
+building, and adventuring with friends** and shows a live countdown to
+**Thursday, August 13, 2026 at 8:00 PM Eastern Daylight Time (EDT,
+UTC−04:00)**. The public client path is **CurseForge only**: use the
+[official Homestead 1.3.7 CurseForge file](https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152),
+install the CurseForge app, choose Homestead `1.3.7`, allocate `8 GiB`, and
+launch. Do not advertise Prism Launcher, Modrinth App, or a reconstructed
+server pack as alternate launcher paths.
+
+The public request form collects a person's name, exact case-sensitive Java
+username, and a Cloudflare Turnstile token before creating a request. It sends
+`POST /api/usernames` JSON
+`{"name":"...","username":"...","turnstileToken":"..."}`. The API validates
+name length 1–80 and username `^[A-Za-z0-9_]{3,16}$`, verifies Siteverify for
+hostname `cozy.popinvites.com`, and persists `requester_name` plus `username`
+in the approval database. Approval is still required before the sidecar can
+add a name through localhost-only RCON.
 
 ## Workload layout
 
@@ -64,16 +85,26 @@ The owner accepted the Minecraft EULA; `configmap.yaml` therefore sets
 single-replica StatefulSet only through the normal `OnDelete` procedure.
 
 Whitelist protection is enabled with both `ENABLE_WHITELIST=TRUE` and
-`ENFORCE_WHITELIST=TRUE`. The non-root `whitelist-sync` sidecar polls the
-internal approval API every 60 seconds with the SOPS-provided
-`whitelist-sync-token` and adds each approved, validated Java username through
+`ENFORCE_WHITELIST=TRUE`. The public form collects a person's name and exact,
+case-sensitive Java username and requires Turnstile before it sends
+`{"name":"...","username":"...","turnstileToken":"..."}` to
+`POST /api/usernames`. The API validates names to 1–80 characters and
+usernames to `^[A-Za-z0-9_]{3,16}$`, verifies the token for hostname
+`cozy.popinvites.com`, and stores `requester_name` with the username.
+
+The owner reviews pending requests at `https://cozy.popinvites.com/#admin` and
+approves only exact Java usernames. The non-root `whitelist-sync` sidecar then
+polls the internal approval API every 60 seconds with the SOPS-provided
+`whitelist-sync-token` and adds each approved, validated username through
 localhost RCON. It only adds usernames; it never removes an entry, writes a
 Secret, or exposes RCON.
+
 Manual administration remains in-pod only (for example,
 `rcon-cli whitelist add <username>` from the Minecraft container). The RCON
 password is supplied only from the SOPS Secret; never put it in a manifest,
-command history, or a Service. Keep the router closed until at least the owner
-is allowlisted and has joined from the LAN with the exact 1.3.7 client.
+command history, or a Service. Keep the router closed until at least the
+owner is approved, allowlisted, and has joined from the LAN with the exact
+CurseForge Homestead `1.3.7` client.
 
 ## Secret boundary
 
@@ -89,6 +120,13 @@ before Argo synchronization:
 - `s3-access-key-id`
 - `s3-secret-access-key`
 - `s3-region`
+
+Turnstile values belong to the companion site, not this Minecraft Secret:
+`VITE_TURNSTILE_SITE_KEY` is public build configuration, while the API's
+`TURNSTILE_SECRET_KEY` is stored under `turnstile-secret-key` in the encrypted
+site approval Secret. Rotate the server secret only through the trusted SOPS
+editor and an apply pipe; never print it, put it in this workload, or expose it
+to Minecraft/RCON.
 
 The populated Secret must remain SOPS-encrypted and is intentionally excluded
 from `kustomization.yaml`. Use a least-privilege S3 identity limited to the
@@ -146,21 +184,34 @@ Before public launch:
 
 ## Launch checklist
 
-Do not announce or expose the server until all of the following are true:
+The following infrastructure/configuration evidence is already recorded:
 
-- EULA acceptance, SOPS secret application, official pack checksum, Java 17,
-  and a successful local server/client version match are recorded.
+- The owner accepted the EULA; the encrypted SOPS Secret contracts, official
+  pack checksum, Java 17 settings, and successful local server startup are
+  documented.
 - The eligible node has `workload.minecraft=true`, the world and pack PVCs are
-  bound, probes are ready, and backup metrics are being scraped.
-- The verified VIP works from the LAN and the owner is allowlisted and can join.
-- The router TCP rule is added only after the LAN test; an outside-network TCP
-  check to `mc.popinvites.com:25565` succeeds. An on-LAN result alone can be
-  hidden by NAT loopback.
-- The public Cozy guide is reachable separately at `cozy.popinvites.com`; it
-  does not expose private IPs, credentials, RCON, or router details.
-- An external five-minute TCP monitor and HTTPS monitor are active before
-  launch. Keep the router and DNS rule closed if any credential, client, WAN,
-  VIP, or restore gate is incomplete.
+  bound, and the Homestead probes are ready.
+- The MetalLB chart, `minecraft-public` pool, `10.0.0.254/32` VIP, and local
+  endpoint are verified; the public guide/API is separate and reachable at
+  `cozy.popinvites.com`.
+
+The following owner/operator gates remain to be evidenced before announcing or
+exposing the server:
+
+- A person submits a name and exact case-sensitive Java username through the
+  Turnstile-protected form; the owner approves the owner request and verifies
+  the allowlist entry.
+- The operator proves the known-marker application-aware Restic backup and
+  throwaway restore sequence above. Backup logs alone are not proof.
+- The owner adds only WAN TCP `25565` -> the verified MetalLB VIP, after the
+  LAN test. An outside-network TCP check to `mc.popinvites.com:25565` must
+  succeed; an on-LAN result alone can be hidden by NAT loopback.
+- The owner joins from outside the home network with the CurseForge
+  Homestead `1.3.7` profile and activates five-minute TCP/HTTPS monitors.
+
+Do not forward UDP, RCON, NodePorts, SSH/Talos/Kubernetes ports, or the API
+server. Keep UPnP disabled. Keep the router rule closed if any owner input,
+client, WAN, backup/restore, or external-monitor gate is incomplete.
 
 To withdraw access, remove the router rule first, then remove or stop the
 explicit Minecraft DNS/DDNS record, take an application-aware backup, and only

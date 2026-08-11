@@ -11,21 +11,32 @@ from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
+from urllib.request import Request, urlopen
 
 import psycopg
 from psycopg.rows import dict_row
 
+TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+
+
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 ADMIN_TOKEN = os.environ.get("APPROVAL_ADMIN_TOKEN", "")
 SYNC_TOKEN = os.environ.get("APPROVAL_SYNC_TOKEN", "")
+TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
+TURNSTILE_EXPECTED_HOSTNAME = os.environ.get("TURNSTILE_EXPECTED_HOSTNAME", "")
 PORT = int(os.environ.get("PORT", "8080"))
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,16}$")
+MAX_NAME_LENGTH = 80
+MAX_BODY_LENGTH = 4096
 
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS username_submissions (
     id BIGSERIAL PRIMARY KEY,
+    requester_name TEXT NOT NULL
+        CONSTRAINT username_submissions_requester_name_length
+        CHECK (char_length(requester_name) BETWEEN 1 AND 80),
     username TEXT NOT NULL,
     username_key TEXT NOT NULL UNIQUE,
     status TEXT NOT NULL CHECK (status IN ('pending', 'approved', 'rejected')),
@@ -33,6 +44,32 @@ CREATE TABLE IF NOT EXISTS username_submissions (
     decided_at TIMESTAMPTZ
 )
 """
+
+
+MIGRATION_STATEMENTS = (
+    # Existing deployments predate requester_name; backfill before enforcing NOT NULL.
+    "ALTER TABLE username_submissions ADD COLUMN IF NOT EXISTS requester_name TEXT",
+    "UPDATE username_submissions SET requester_name = 'Legacy requester' "
+    "WHERE requester_name IS NULL",
+    """
+    DO $$
+    BEGIN
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conrelid = 'username_submissions'::regclass
+              AND conname = 'username_submissions_requester_name_length'
+        ) THEN
+            ALTER TABLE username_submissions
+                ADD CONSTRAINT username_submissions_requester_name_length
+                CHECK (char_length(requester_name) BETWEEN 1 AND 80) NOT VALID;
+        END IF;
+    END
+    $$;
+    """,
+    "ALTER TABLE username_submissions ALTER COLUMN requester_name SET NOT NULL",
+    "ALTER TABLE username_submissions ALTER COLUMN requester_name DROP DEFAULT",
+)
 
 
 INDEX = """
@@ -54,15 +91,46 @@ def connect() -> psycopg.Connection:
 def initialize_database() -> None:
     with connect() as connection:
         connection.execute(SCHEMA)
+        for statement in MIGRATION_STATEMENTS:
+            connection.execute(statement)
         connection.execute(INDEX)
+
+
+def verify_turnstile(token: str) -> bool:
+    if not TURNSTILE_SECRET_KEY:
+        return False
+    payload = urlencode(
+        {"secret": TURNSTILE_SECRET_KEY, "response": token},
+    ).encode("utf-8")
+    request = Request(
+        TURNSTILE_SITEVERIFY_URL,
+        data=payload,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=5) as response:
+            result = json.loads(response.read())
+    except Exception:
+        # A Siteverify outage must never bypass captcha verification.
+        return False
+    if not isinstance(result, dict) or result.get("success") is not True:
+        return False
+    return (
+        not TURNSTILE_EXPECTED_HOSTNAME
+        or result.get("hostname") == TURNSTILE_EXPECTED_HOSTNAME
+    )
 
 
 def row_to_dict(row: dict[str, Any]) -> dict[str, Any]:
     def iso(value: Any) -> str | None:
         return value.isoformat() if value is not None else None
 
+    requester_name = row.get("requester_name", "Legacy requester")
     return {
         "id": row["id"],
+        "name": requester_name,
+        "requesterName": requester_name,
         "username": row["username"],
         "status": row["status"],
         "submittedAt": iso(row["submitted_at"]),
@@ -104,7 +172,7 @@ class ApprovalHandler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             return None
-        if length <= 0 or length > 1024:
+        if length <= 0 or length > MAX_BODY_LENGTH:
             return None
         try:
             parsed = json.loads(self.rfile.read(length))
@@ -150,7 +218,7 @@ class ApprovalHandler(BaseHTTPRequestHandler):
                 return
             with connect() as connection:
                 rows = connection.execute(
-                    "SELECT id, username, status, submitted_at, decided_at "
+                    "SELECT id, requester_name, username, status, submitted_at, decided_at "
                     "FROM username_submissions ORDER BY submitted_at DESC"
                 ).fetchall()
             self.send_json(HTTPStatus.OK, [row_to_dict(row) for row in rows])
@@ -170,6 +238,17 @@ class ApprovalHandler(BaseHTTPRequestHandler):
 
     def submit_username(self) -> None:
         payload = self.read_json()
+        name = payload.get("name", "") if payload else ""
+        if not isinstance(name, str):
+            name = ""
+        name = name.strip()
+        if not 1 <= len(name) <= MAX_NAME_LENGTH:
+            self.send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "Enter your name: 1–80 characters."},
+            )
+            return
+
         username = payload.get("username", "") if payload else ""
         if not isinstance(username, str):
             username = ""
@@ -181,15 +260,29 @@ class ApprovalHandler(BaseHTTPRequestHandler):
             )
             return
 
+        turnstile_token = payload.get("turnstileToken", "") if payload else ""
+        if not isinstance(turnstile_token, str) or not turnstile_token.strip():
+            self.send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "Turnstile verification is required."},
+            )
+            return
+        if not verify_turnstile(turnstile_token.strip()):
+            self.send_json(
+                HTTPStatus.FORBIDDEN,
+                {"error": "Turnstile verification failed."},
+            )
+            return
+
         username_key = username.casefold()
         submitted_at = utc_now()
         with connect() as connection:
             inserted = connection.execute(
                 "INSERT INTO username_submissions "
-                "(username, username_key, status, submitted_at) "
-                "VALUES (%s, %s, 'pending', %s) "
+                "(requester_name, username, username_key, status, submitted_at) "
+                "VALUES (%s, %s, %s, 'pending', %s) "
                 "ON CONFLICT (username_key) DO NOTHING RETURNING id",
-                (username, username_key, submitted_at),
+                (name, username, username_key, submitted_at),
             ).fetchone()
             if inserted is not None:
                 submission_id = inserted["id"]
@@ -204,9 +297,9 @@ class ApprovalHandler(BaseHTTPRequestHandler):
                     raise RuntimeError("username submission disappeared during insert")
                 if existing["status"] == "rejected":
                     connection.execute(
-                        "UPDATE username_submissions SET username = %s, status = 'pending', "
-                        "submitted_at = %s, decided_at = NULL WHERE id = %s",
-                        (username, submitted_at, existing["id"]),
+                        "UPDATE username_submissions SET requester_name = %s, username = %s, "
+                        "status = 'pending', submitted_at = %s, decided_at = NULL WHERE id = %s",
+                        (name, username, submitted_at, existing["id"]),
                     )
                     status = "pending"
                 else:
@@ -224,7 +317,7 @@ class ApprovalHandler(BaseHTTPRequestHandler):
             return
         with connect() as connection:
             row = connection.execute(
-                "SELECT id, username, status, submitted_at, decided_at "
+                "SELECT id, requester_name, username, status, submitted_at, decided_at "
                 "FROM username_submissions WHERE id = %s",
                 (submission_id,),
             ).fetchone()
@@ -237,7 +330,7 @@ class ApprovalHandler(BaseHTTPRequestHandler):
             status = "approved" if decision == "approve" else "rejected"
             updated = connection.execute(
                 "UPDATE username_submissions SET status = %s, decided_at = %s "
-                "WHERE id = %s RETURNING id, username, status, submitted_at, decided_at",
+                "WHERE id = %s RETURNING id, requester_name, username, status, submitted_at, decided_at",
                 (status, utc_now(), submission_id),
             ).fetchone()
         self.send_json(HTTPStatus.OK, row_to_dict(updated))

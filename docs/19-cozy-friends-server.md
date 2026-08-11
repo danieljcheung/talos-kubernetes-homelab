@@ -8,9 +8,35 @@ not a public-launch claim.
 Current checkpoint: the MetalLB chart is installed, the Cozy guide and
 token-authenticated approval API are Argo-synced and reachable at
 `https://cozy.popinvites.com`, and the LAN-verified MetalLB VIP is
-`10.0.0.254/32`. The Homestead pod is ready with the whitelist-sync sidecar;
-DDNS, router TCP forwarding, backup freshness/restore, client path, and
-external monitoring remain intentionally gated.
+`10.0.0.254/32`. The Homestead pod is ready with the whitelist-sync sidecar.
+The owner has accepted the EULA; the MetalLB pool, encrypted Secret contracts,
+and DNS-only `mc` record are infrastructure/configuration evidence, not
+proof of public play. This runbook makes no claim that a public Minecraft
+client join, router TCP forwarding, backup restore, or external monitor has
+been proven.
+
+## Public guide promise and launch target
+
+The friend-facing promise is simple: **a shared Homestead world for chilling,
+building, and adventuring with friends**. The guide shows a live countdown to
+**Thursday, August 13, 2026 at 8:00 PM Eastern Daylight Time (EDT,
+UTC−04:00)**. August uses EDT, not UTC−05:00; the countdown target is a
+scheduled invitation, not evidence that public Minecraft access is already
+open.
+
+The public guide recommends **only CurseForge** as the launcher path. Link
+friends to the [Homestead 1.3.7 CurseForge file](https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152):
+install the CurseForge app, search for Homestead, choose version `1.3.7`,
+allocate `8 GiB` of client RAM, and launch. Do not present Prism Launcher,
+Modrinth App, or a reconstructed server pack as alternate public launcher
+instructions.
+
+Before a request can be reviewed, the public form collects the person's name
+(`name`) and exact, case-sensitive Minecraft Java username (`username`), and
+requires a Cloudflare Turnstile challenge token (`turnstileToken`). The API
+contract is `POST /api/usernames` with JSON
+`{"name":"...","username":"...","turnstileToken":"..."}`. The request is not
+an allowlist entry until the owner reviews and approves it.
 
 Primary source links:
 
@@ -70,24 +96,34 @@ Verified at the current checkpoint:
    `Done` readiness log. The ZIP remains outside Git and OCI registries.
 7. The separate Cozy site Application is Argo-synced and Healthy.
 
-Remaining launch gates:
+Remaining owner/operator launch gates (these are evidence and credential
+boundaries, not claims that the EULA, MetalLB pool, or encrypted Secret
+contracts are absent):
 
-1. Add only WAN TCP `25565` -> `10.0.0.254:25565` through the Rogers Xfinity
-   app. Do not forward UDP, RCON, NodePorts, or admin ports.
-2. Verify the RCON/Restic/S3 values through the local SOPS workflow and prove a
-   successful application-aware backup; keep the Longhorn backup target healthy.
-3. Supply exact case-sensitive Java usernames through the public approval form,
-   approve the owner account, and confirm the allowlist before exposing WAN.
-4. The verified ZIP is staged on the private pack PVC and the Homestead pod is
-   ready; retain the successful startup evidence through the first real client.
-5. Prove a known world marker through an application-aware backup, throwaway
-   restore, and disconnected throwaway server start.
-6. Verify a LAN client through `mc.popinvites.com`, then activate and test
-   UptimeRobot TCP and HTTPS monitors from outside the home network.
+1. The owner must add only WAN TCP `25565` -> `10.0.0.254:25565` through the
+   Rogers Xfinity app. Do not forward UDP, RCON, NodePorts, or admin ports.
+2. The owner must submit a person's name and exact, case-sensitive Java
+   username through the Turnstile-protected public form, then use the
+   token-gated admin dashboard to approve the owner account. Confirm the
+   resulting allowlist entry before exposing WAN access.
+3. The operator must observe a successful application-aware Restic backup and
+   prove the marker/throwaway restore sequence in Section 9. Use the existing
+   encrypted RCON/Restic/S3 values through SOPS; never print them or treat
+   their presence as backup proof. Keep the Longhorn backup target healthy.
+4. After the LAN test, the owner must join from a genuinely outside network
+   with the CurseForge Homestead `1.3.7` profile, Minecraft `1.20.1`, Fabric,
+   Java `17`, and `8 GiB` client RAM. An on-LAN result can be hidden by NAT
+   loopback and is not public Internet proof.
+5. The owner must create and activate five-minute UptimeRobot TCP and HTTPS
+   monitors, complete account/email verification, and observe a successful
+   outside-network check. No external monitor is claimed proven here.
+6. Friends may submit their own name and exact Java username after the form
+   is live; each request still requires Turnstile, owner review, and approval.
 
 The router's web UI delegates port-forward configuration to the Rogers Xfinity
-app, so the edge rule is still intentionally absent. Do not infer Minecraft
-readiness from the repository or the public guide alone.
+app, so the edge rule is intentionally still absent from the recorded
+checkpoint. Do not infer Minecraft readiness from the repository, DNS, LAN
+VIP, or public guide alone.
 
 ## 3. Official artifact record
 
@@ -100,7 +136,7 @@ Download only from the official [server-pack page](https://cozystudios.org/homes
 | Source-advertised size | `512M` |
 | Observed HTTP content length | `537016567` bytes (about `512.14 MiB`) |
 | Expected SHA-256 | `38e90816b5eb6bd5a3b66096ad60d08bd9c8d69c00b4d27c6bc38f4233fd9e81` |
-| Staging status | Must be downloaded and verified on the trusted workstation; no ZIP is committed here |
+| Staging status | Verified against the recorded byte count and SHA-256 and staged on the private `homestead-pack` PVC; no ZIP is committed here |
 
 At staging time, verify both the byte count and digest before copying the ZIP to the private `homestead-pack` Longhorn PVC. For example:
 
@@ -138,11 +174,17 @@ SIMULATION_DISTANCE=6
 MOTD=Cozy Friends Server | Homestead 1.3.7
 ```
 
-Submit the exact Java username through the public Cozy form. The owner reviews
-pending rows at `https://cozy.popinvites.com/#admin`; the in-cluster sidecar
-adds approved names through localhost-only RCON. Keep the router rule closed
-until the owner can join locally. Do not copy a username from a display name or
-launcher nickname.
+Submit the person's name and exact, case-sensitive Java username through the
+public Cozy form. The form requires a Cloudflare Turnstile challenge before it
+posts `{"name":"...","username":"...","turnstileToken":"..."}` to
+`POST /api/usernames`. The API accepts names only when they are 1–80 characters
+and usernames only when they match `^[A-Za-z0-9_]{3,16}$`; it verifies the
+Turnstile token with Siteverify for the expected hostname
+`cozy.popinvites.com` before persisting `requester_name` and `username`.
+The owner reviews pending rows at `https://cozy.popinvites.com/#admin`; the
+in-cluster sidecar adds approved names through localhost-only RCON. Keep the
+router rule closed until the owner can join locally. Do not copy a username
+from a display name or launcher nickname.
 
 For a manual removal, use localhost-only RCON and verify the resulting list:
 
@@ -193,32 +235,57 @@ argocd app sync cozy-friends
 argocd app wait cozy-friends --health --sync
 ```
 
-The exact child Application manifests are under `manifests/argocd/apps/`. Argo manages the workload and MetalLB configuration resources; the MetalLB Helm release itself remains a deliberate manual platform install.
-
-## 6. Secrets and SOPS boundary
-
-The repository follows the existing [SOPS workflow](12-sops-secrets-workflow.md): encrypted `.secret.yaml` files are stored in Git, real values are decrypted only on the trusted admin workstation, and the resulting Secret is piped directly to Kubernetes. Argo does not receive plaintext values from Git.
-
-The Cozy Friends Secret contains RCON, Restic, repository, and least-privilege S3 values. The Cloudflare DDNS Secret contains only the scoped Zone DNS Read/Edit token for `popinvites.com`. Keep both encrypted files excluded from their Kustomization resources. Apply them locally before syncing the corresponding Application, without printing or inspecting values:
+The Cozy Friends Secret contains RCON, Restic, repository, and least-privilege
+S3 values. The Cloudflare DDNS Secret contains only the scoped Zone DNS Read/Edit
+token for `popinvites.com`. The encrypted approval Secret contains the private
+admin and sync bearer values plus the Turnstile server secret under
+`turnstile-secret-key`; the API receives it as `TURNSTILE_SECRET_KEY`. Keep
+these encrypted files excluded from their Kustomization resources. Apply them
+locally before syncing the corresponding Application, without printing or
+inspecting values:
 
 ```bash
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
 sops --decrypt manifests/cozy-friends/cozy-friends.secret.yaml | kubectl apply -f -
 sops --decrypt manifests/cloudflare-ddns/cloudflare-ddns.secret.yaml | kubectl apply -f -
+sops --decrypt manifests/cozy-friends-site/cozy-friends-approval.secret.yaml | kubectl apply -f -
 
 kubectl -n cozy-friends get secret cozy-friends-secrets -o name
 kubectl -n cloudflare-ddns get secret cloudflare-ddns-token -o name
+kubectl -n cozy-friends-site get secret cozy-friends-approval-secrets -o name
 ```
 
-The final two commands verify only Secret metadata. Never place a token, password, private key, S3 endpoint credential, or decrypted YAML in this runbook or in command output. The existing [Cloudflare DDNS README](../manifests/cloudflare-ddns/README.md) documents the token file mount and scope.
+`VITE_TURNSTILE_SITE_KEY` is the public site key supplied to the Cozy Vite
+build. It may be present in the browser bundle, but `TURNSTILE_SECRET_KEY`
+must never be bundled, committed, logged, or entered into a browser. To rotate
+the server secret, open the encrypted approval Secret directly in the trusted
+SOPS editor, replace only `turnstile-secret-key`, save the encrypted file, and
+pipe it to `kubectl apply -f -`; do not run `sops --decrypt` to a terminal, use
+shell tracing, or print YAML. Restart the approval API so it reads the new
+value, then verify only Secret metadata and API readiness.
+
+Verify the Turnstile boundary from a signed-out browser: the widget must load
+on `cozy.popinvites.com`, a missing or failed challenge must show a submission
+error and create no database row, and a completed challenge must allow the
+request to proceed. For an API smoke check, expect a missing `turnstileToken`
+to be rejected with `400`, a failed Siteverify result (including a hostname
+other than `cozy.popinvites.com`) with `403`, and invalid `name`/`username`
+shapes with `400`; never include a real token or secret in the request log.
+
+The final metadata-only commands above verify object presence, not secret
+values. Never place a token, password, private key, S3 endpoint credential,
+Turnstile secret, or decrypted YAML in this runbook or in command output. The
+existing [Cloudflare DDNS README](../manifests/cloudflare-ddns/README.md)
+documents the token file mount and scope.
 
 ## 7. MetalLB install and upgrade
 
 MetalLB is Layer 2 only, chart `0.16.1`, with one `autoAssign: false` `/32`
 pool at the LAN-verified candidate `10.0.0.254`, selected only by the Cozy
 Friends gameplay Service. Read [`manifests/metallb/README.md`](../manifests/metallb/README.md)
-before changing it. The chart is installed and ready; sync the pool only
-after the WAN rule and remaining launch gates are complete.
+before changing it. The chart, production pool, and VIP allocation are
+already installed and ready; do not list the pool as a missing launch input.
+Future changes still require the router and remaining launch gates below.
 
 Install the namespace and Helm release manually:
 
@@ -404,10 +471,11 @@ Record the DHCP pool and candidate-VIP evidence, verified WAN IPv4, CNI/kube-pro
 ## 14. Username approval and whitelist operations
 
 The public guide and the Minecraft allowlist are connected by a separate,
-token-authenticated approval API. This workflow is intentionally additive to
-the existing server controls: `ONLINE_MODE=TRUE`, `ENABLE_WHITELIST=TRUE`, and
-`ENFORCE_WHITELIST=TRUE` remain required, and an approved submission is not a
-substitute for an exact Java username or for the launch gates above.
+Turnstile-protected, token-authenticated approval API. This workflow is
+intentionally additive to the existing server controls: `ONLINE_MODE=TRUE`,
+`ENABLE_WHITELIST=TRUE`, and `ENFORCE_WHITELIST=TRUE` remain required, and an
+approved submission is not a substitute for an exact Java username or for the
+launch gates above.
 
 ### Public request and private decision flow
 
@@ -415,53 +483,63 @@ The browser uses same-origin API paths on `https://cozy.popinvites.com`:
 
 | Operation | Request | Authentication | Meaning |
 | --- | --- | --- | --- |
-| Submit a username | `POST /api/usernames` with `{"username":"..."}` | None | Public form creates or reopens a request. |
-| List requests | `GET /api/admin/submissions` | `Authorization: Bearer <admin-token>` | Admin dashboard reads all submissions and timestamps. |
+| Submit a request | `POST /api/usernames` with `{"name":"...","username":"...","turnstileToken":"..."}` | Cloudflare Turnstile token, verified server-side | Public form creates or reopens a request. |
+| List requests | `GET /api/admin/submissions` | `Authorization: Bearer <admin-token>` | Admin dashboard reads requester names, exact usernames, statuses, and timestamps. |
 | Approve | `POST /api/admin/submissions/{id}/approve` | Admin bearer token | Changes one pending row to `approved`. |
 | Reject | `POST /api/admin/submissions/{id}/reject` | Admin bearer token | Changes one pending row to `rejected`. |
 | Produce the allowlist feed | `GET /api/whitelist/approved.txt` | `Authorization: Bearer <sync-token>` | Returns approved usernames, one per line, for the in-cluster sync sidecar. |
 
-The public form is on the main page at `cozy.popinvites.com`. The token-gated
+The public form is on the main page at `cozy.popinvites.com` and renders
+Turnstile with the public `VITE_TURNSTILE_SITE_KEY`. The API receives the
+private `TURNSTILE_SECRET_KEY` from the encrypted approval Secret, sends each
+token to Cloudflare Siteverify, and accepts only a successful result whose
+expected hostname is `cozy.popinvites.com`. A missing token is a client error;
+a failed verification or hostname mismatch is forbidden. The token-gated
 operator page is `https://cozy.popinvites.com/#admin`; the `#admin` fragment
-selects the dashboard, while the token is entered into its password field and
-is not part of the URL. The API routes are sent through the same-host
-`/api` Ingress path to the internal
+selects the dashboard, while the admin token is entered into its password
+field and is not part of the URL. The API routes are sent through the
+same-host `/api` Ingress path to the internal
 `Service/cozy-friends-approval-api` on port `8080`. The API Service is
 ClusterIP-only: it is not a public or router-facing port. There is no RCON
 Service and no router rule for either RCON or the API.
 
-Use the dashboard to load requests, inspect the exact case-sensitive Java
-username, and act only on rows marked `pending`. A successful decision returns
-the updated row with its `decidedAt` timestamp. Do not copy the admin token
-into a URL, a shell command, a Git file, a ConfigMap, a browser bookmark, or
-chat. Do not use the admin token for the whitelist feed; the two bearer
-boundaries are intentionally separate.
+Use the dashboard to load requests, inspect the person's name and exact
+case-sensitive Java username, and act only on rows marked `pending`. A
+successful decision returns the updated row with its `decidedAt` timestamp. Do
+not copy the admin token into a URL, a shell command, a Git file, a ConfigMap,
+a browser bookmark, or chat. Do not use the admin token for the whitelist
+feed; the two bearer boundaries are intentionally separate.
 
 ### Postgres state and duplicate behavior
 
 `Cluster/cozy-friends-approval-db` is a CloudNativePG-backed Postgres cluster
 in namespace `cozy-friends-site`, with the database and owner
 `cozy_friends_approval`. The API initializes the `username_submissions` table
-and its status index on startup. The generated application Secret is
+and its status index on startup. Its idempotent migration adds the
+`requester_name` column and backfills legacy rows with `Legacy requester`
+before new requests are persisted. The generated application Secret is
 `cozy-friends-approval-db-app`; its `uri` key supplies the API
 `DATABASE_URL`. This database is the source of truth; the static site
 ConfigMap does not contain requests or approvals. It is a single CNPG
 instance on Longhorn, so persistence is not high availability; establish and
 preserve a tested database backup/restore path before production.
 
-Each row has an ID, the submitted spelling, a case-folded (case-insensitive)
-unique `username_key`, a status (`pending`, `approved`, or `rejected`), and
-submission/decision timestamps. The API trims the submitted value and accepts
-only 3–16 ASCII letters, digits, or underscores. Because uniqueness is on
-`username_key`, `DanBuilder`, `danbuilder`, and `DANBUILDER` refer to one
-submission rather than three accounts:
+Each row has an ID, `requester_name`, the submitted `username` spelling, a
+case-folded (case-insensitive) unique `username_key`, a status (`pending`,
+`approved`, or `rejected`), and submission/decision timestamps. The API trims
+the name and username, accepts names only from 1–80 characters, and accepts
+usernames only when they match `^[A-Za-z0-9_]{3,16}$`. Turnstile Siteverify
+must succeed for `cozy.popinvites.com` before a row is inserted or reopened.
+Because uniqueness is on `username_key`, `DanBuilder`, `danbuilder`, and
+`DANBUILDER` refer to one submission rather than three accounts:
 
-1. A new valid name creates one `pending` row and returns `201`.
-2. Repeating a name with different casing returns the existing ID and current
-   status (`pending` or `approved`) with `200`; it does not create a
+1. A new valid name/username pair creates one `pending` row and returns `201`.
+2. Repeating a username with different casing returns the existing ID and
+   current status (`pending` or `approved`) with `200`; it does not create a
    duplicate or reset an approval.
-3. Re-submitting a `rejected` name reuses that row, stores the newly supplied
-   spelling and timestamp, clears `decidedAt`, and returns it to `pending`.
+3. Re-submitting a `rejected` username reuses that row, stores the newly
+   supplied requester name and spelling/timestamp, clears `decidedAt`, and
+   returns it to `pending`.
 4. Approve/reject is allowed only while the row is `pending`. A missing ID is
    `404`; trying to decide an already decided row is `409`.
 5. Only `approved` rows are emitted in `approved.txt`, ordered by the
@@ -531,19 +609,20 @@ the dashboard's password field:
 | `Secret/cozy-friends-approval-secrets` in `cozy-friends-site` | `sync-token` | API `APPROVAL_SYNC_TOKEN` |
 | `Secret/cozy-friends-secrets` in `cozy-friends` | `whitelist-sync-token` | The 60-second whitelist sidecar |
 | `Secret/cozy-friends-approval-db-app` in `cozy-friends-site` | CNPG-generated `uri` | API `DATABASE_URL` |
+| `Secret/cozy-friends-approval-secrets` in `cozy-friends-site` | `turnstile-secret-key` | API `TURNSTILE_SECRET_KEY` for Cloudflare Siteverify |
 
 `sync-token` and `whitelist-sync-token` MUST contain the same generated
 bearer value. Keep the existing RCON, Restic, repository, and S3 keys in
 `cozy-friends-secrets`; adding the sync key does not weaken those boundaries.
 The encrypted approval Secret is not a Kustomize plaintext resource and must
 not be replaced with an example value.
-
 Create or edit the encrypted approval and Minecraft Secret files in the
-trusted workstation's SOPS editor. Paste the admin token and one shared sync
-token directly into the corresponding encrypted fields; never display them
-with `sops --decrypt`, shell tracing, `kubectl get -o yaml`, JSONPath,
-`base64 -d`, `env`, or process listings. Apply only through a pipe, whose
-output should contain Kubernetes object metadata rather than values:
+trusted workstation's SOPS editor. Paste the admin token, one shared sync
+token, and the Turnstile server secret directly into the corresponding
+encrypted fields; never display them with `sops --decrypt`, shell tracing,
+`kubectl get -o yaml`, JSONPath, `base64 -d`, `env`, or process listings. Apply
+only through a pipe, whose output should contain Kubernetes object metadata
+rather than values:
 
 ```bash
 export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
@@ -558,13 +637,20 @@ kubectl -n cozy-friends get secret cozy-friends-secrets -o name
 
 The operator may enter the admin token directly into the password field at
 `cozy.popinvites.com/#admin`; do not save it in browser autofill, screenshots,
-URL fragments, or clipboard history. For rotation, prepare a new admin token
-and one new shared sync token out of band, update both encrypted Secret keys,
-apply both SOPS files without printing them, then restart the API Deployment
-and the `homestead` pod so both consumers receive the same value. A brief
-retry window is safer than weakening authorization; verify API readiness and
-one successful sync cycle after rotation. Never rotate only one of the two
-sync-token copies.
+URL fragments, or clipboard history. For a Turnstile-secret rotation, prepare
+the replacement out of band, open the encrypted approval Secret in SOPS,
+replace only `turnstile-secret-key`, save it encrypted, and apply it through
+the pipe above. Restart the API Deployment so it reads the new
+`TURNSTILE_SECRET_KEY`; then verify only Secret metadata, API readiness, and
+the signed-out widget/API failure cases in Section 6. Never paste the secret
+into a terminal, browser, issue, chat, or generated site bundle.
+
+For admin/sync rotation, prepare a new admin token and one new shared sync
+token out of band, update both encrypted Secret keys, apply both SOPS files
+without printing them, then restart the API Deployment and the `homestead` pod
+so both consumers receive the same value. A brief retry window is safer than
+weakening authorization; verify API readiness and one successful sync cycle
+after rotation. Never rotate only one of the two sync-token copies.
 
 ### First rollout and immutable hook ordering
 

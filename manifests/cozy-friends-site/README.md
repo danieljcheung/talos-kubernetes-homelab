@@ -4,6 +4,40 @@ This directory delivers the static Cozy Friends guide at `cozy.popinvites.com`. 
 site source and Vite build live under `site/cozy`; this workload only serves the
 three generated browser assets from a restricted Kubernetes namespace.
 
+## Public guide contract
+
+The public message is a field-guide invitation to a shared Homestead world for
+**chilling, building, and adventuring with friends**. The page displays a live
+countdown to **Thursday, August 13, 2026 at 8:00 PM Eastern Daylight Time
+(EDT, UTC−04:00)**. August is EDT, so do not document this target as
+UTC−05:00.
+
+The public launcher guidance is **CurseForge only**. Link to the official
+[Homestead 1.3.7 CurseForge file](https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152)
+and tell friends to install the CurseForge app, search for Homestead, choose
+version `1.3.7`, allocate `8 GiB` of client RAM, and launch. Do not add Prism
+Launcher, Modrinth App, or reconstructed-pack instructions as alternate
+launcher paths.
+
+The public request form collects the person's `name`, the exact
+case-sensitive Minecraft Java `username`, and a Cloudflare Turnstile
+challenge. It submits exactly:
+
+```json
+{
+  "name": "requester's name",
+  "username": "ExactJavaName",
+  "turnstileToken": "browser-generated-token"
+}
+```
+
+`VITE_TURNSTILE_SITE_KEY` is the public site key used by the browser build and
+may be visible in the rendered bundle. The API's `TURNSTILE_SECRET_KEY` is
+private, lives only in the encrypted approval Secret, and is used for
+Cloudflare Siteverify with expected hostname `cozy.popinvites.com`. Never put
+the server secret in this ConfigMap, an image, browser code, Git, logs, or
+chat.
+
 ## Build and ConfigMap contract
 
 `configmap.yaml` is generated state, not a hand-authored copy of the site. Its
@@ -93,23 +127,51 @@ rendered guide.
 
 ## Username approval API
 
-The public guide posts exact Java usernames to the same-host `/api/usernames`
-route. The `/api` Ingress path targets the internal
+The public guide posts a person's name and exact Java username to the
+same-host `/api/usernames` route after the Turnstile widget completes. The
+request body is exactly
+`{"name":"...","username":"...","turnstileToken":"..."}`. The API trims and
+validates `name` as 1–80 characters and `username` against
+`^[A-Za-z0-9_]{3,16}$`, then calls Cloudflare Siteverify with
+`TURNSTILE_SECRET_KEY` and requires the expected hostname
+`cozy.popinvites.com` before it persists anything. Missing/invalid Turnstile
+tokens and invalid fields must not create a request.
+
+The `/api` Ingress path targets the internal
 `Service/cozy-friends-approval-api` on port 8080; it is ClusterIP-only. The
 token-authenticated operator page is `https://cozy.popinvites.com/#admin`.
+The owner reviews pending rows, sees both `requester_name` and the exact
+`username`, and approves or rejects them. Approved rows are emitted to the
+protected whitelist feed; the Minecraft sidecar adds them through localhost
+RCON. No public API Service, RCON Service, router rule, or approval-specific
+metrics endpoint is created.
 
 Requests persist in the one-instance CloudNativePG
-`Cluster/cozy-friends-approval-db` on Longhorn. Apply the encrypted
-`cozy-friends-approval.secret.yaml` locally through SOPS; it is intentionally
-excluded from this Kustomization. The API also needs the runtime-only
-`ghcr-danieljcheung` image-pull Secret in this namespace because its GHCR
-package is private. Copy/apply that Secret through the trusted workstation
-workflow; never commit it or print its credentials.
+`Cluster/cozy-friends-approval-db` on Longhorn. The API's startup migration
+adds `requester_name` to the existing `username_submissions` table and
+backfills legacy rows as `Legacy requester`; the database remains the source
+of truth. Apply the encrypted `cozy-friends-approval.secret.yaml` locally
+through SOPS; it is intentionally excluded from this Kustomization. The
+Secret contains admin/sync values and the private `turnstile-secret-key`
+consumed as `TURNSTILE_SECRET_KEY`; rotate it only in SOPS and never print it.
+The public `VITE_TURNSTILE_SITE_KEY` is build configuration, not a substitute
+for the server secret.
 
-The `homestead` whitelist-sync sidecar fetches the approved feed with the
-shared sync token every 60 seconds and adds validated names through localhost
-RCON. No API Service, RCON Service, router rule, or approval-specific metrics
-endpoint is created for this workflow.
+The API also needs the runtime-only `ghcr-danieljcheung` image-pull Secret in
+this namespace because its GHCR package is private. Copy/apply that Secret
+through the trusted workstation workflow; never commit it or print its
+credentials.
+
+## Turnstile failure checks
+
+From a signed-out browser, confirm the widget loads on
+`cozy.popinvites.com`. A missing or failed challenge must show a visible
+submission error and leave the database unchanged; a completed challenge must
+allow the request to proceed. The API contract is observable without a real
+secret: a missing `turnstileToken` is rejected with `400`, a failed Siteverify
+result or hostname mismatch with `403`, and invalid name/username shapes with
+`400`. Do not paste real tokens into browser history, shell commands, logs, or
+issues.
 
 ## Files
 

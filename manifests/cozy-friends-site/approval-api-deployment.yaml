@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: approval-api
-          image: ghcr.io/danieljcheung/cozy-friends-approval-api@sha256:0634a0c60a44a1e9bf48db0be1d6b226002efe3dbcd975b5e4b446a177930816
+          image: ghcr.io/danieljcheung/cozy-friends-approval-api@sha256:5265bb70fe72e81fc4bb09eb5bb91ad7c2e59fd28e7559aba1e4599c2cf44cc8
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
@@ -68,6 +68,13 @@ spec:
                 secretKeyRef:
                   name: cozy-friends-approval-secrets
                   key: sync-token
+            - name: TURNSTILE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cozy-friends-approval-secrets
+                  key: turnstile-secret-key
+            - name: TURNSTILE_EXPECTED_HOSTNAME
+              value: cozy.popinvites.com
           livenessProbe:
             httpGet:
               path: /healthz

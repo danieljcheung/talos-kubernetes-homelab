@@ -1,12 +1,27 @@
 export const SERVER_ADDRESS = 'mc.popinvites.com'
 export const HERO_EYEBROW = 'COZY FRIENDS SERVER'
 export const HERO_HEADING = 'Build slow. Wander far. Come home.'
-export const HERO_BODY = 'A shared Homestead world for cozy builds, big adventures, and good company.'
+export const HERO_BODY = 'A shared Homestead world for chilling, building, and adventuring with friends.'
 export const VERSION_LINE = 'Homestead 1.3.7 • Minecraft 1.20.1 • Fabric • Java Edition'
-export const INVITE_NOTE = 'Invite-only. Send the exact Java username below; Dan approves friends before they join.'
+export const INVITE_NOTE = 'Invite-only. Ask Dan to add your exact Minecraft username before joining.'
+export const LAUNCH_DATE_ISO = '2026-08-13T20:00:00-04:00'
+export const LAUNCH_DATE_MS = Date.parse(LAUNCH_DATE_ISO)
+export const COUNTDOWN_EYEBROW = 'COUNTDOWN TO LAUNCH'
+export const COUNTDOWN_HEADING = 'The first campfire is almost ready.'
+export const COUNTDOWN_BODY = 'We open the Homestead world on Thursday, August 13 at 8:00 PM Eastern.'
+export const COUNTDOWN_LIVE = 'Launch is live. Welcome to the world.'
+export const COUNTDOWN_WAITING = 'Time until launch'
+export const COUNTDOWN_UNITS = ['days', 'hours', 'minutes', 'seconds'] as const
+
+export const NAME_REQUEST_LABEL = 'Name'
+export const NAME_REQUEST_PLACEHOLDER = 'Your name'
+export const NAME_REQUEST_VALIDATION = 'Add your name (1–80 characters).'
+export const TURNSTILE_LABEL = 'Security check'
+export const TURNSTILE_REQUIRED = 'Complete the security check before sending your request.'
+export const TURNSTILE_UNAVAILABLE = 'The security check is not ready. Try again in a moment.'
 export const USERNAME_REQUEST_EYEBROW = 'JOIN THE CAMPFIRE'
 export const USERNAME_REQUEST_HEADING = 'Ask to join the world'
-export const USERNAME_REQUEST_BODY = 'Leave your exact Minecraft Java username and Dan will review it before adding you to the allowlist.'
+export const USERNAME_REQUEST_BODY = 'Enter your name and exact Minecraft Java username. Dan reviews requests before adding friends to the allowlist.'
 export const USERNAME_REQUEST_LABEL = 'Minecraft Java username'
 export const USERNAME_REQUEST_PLACEHOLDER = 'Your exact in-game name'
 export const USERNAME_REQUEST_SUBMIT = 'Request an allowlist spot'
@@ -26,20 +41,16 @@ export const OFFICIAL_LINKS = {
 export type LauncherGuide = {
   name: string
   instructions: string
+  href: string
+  linkLabel: string
 }
 
 export const LAUNCHER_GUIDES: readonly LauncherGuide[] = [
   {
     name: 'CurseForge',
-    instructions: 'install the CurseForge app, search for Homestead, choose version 1.3.7, allocate 8 GiB client RAM, and launch.',
-  },
-  {
-    name: 'Prism Launcher',
-    instructions: 'Add Instance, choose CurseForge, search Homestead, select 1.3.7, allocate 8 GiB, and launch.',
-  },
-  {
-    name: 'Modrinth App',
-    instructions: 'install Homestead 1.3.7, then follow the official FTB mods guide and add the listed Fabric files: FTB Quests 2001.4.13, FTB Teams 2001.3.1, FTB Essentials 2001.2.3, FTB XMod Compat 2.1.3, FTB Library 2001.2.9, FTB Filter System 20.0.1, and QuestsAdditions 1.20.1-1.4.6.',
+    instructions: 'Install the CurseForge app, search for Homestead, choose version 1.3.7, allocate 8 GiB client RAM, and launch.',
+    href: OFFICIAL_LINKS.curseforge,
+    linkLabel: 'Open Homestead 1.3.7 on CurseForge'
   }
 ]
 

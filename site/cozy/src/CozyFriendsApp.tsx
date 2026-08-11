@@ -1,19 +1,31 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   COMMUNITY_LINE,
   CONNECTION_STEPS,
+  COUNTDOWN_BODY,
+  COUNTDOWN_EYEBROW,
+  COUNTDOWN_HEADING,
+  COUNTDOWN_LIVE,
+  COUNTDOWN_WAITING,
   HERO_BODY,
   HERO_EYEBROW,
   HERO_HEADING,
   INVITE_NOTE,
-  USERNAME_REQUEST_BODY,
-  USERNAME_REQUEST_EYEBROW,
-  USERNAME_REQUEST_HEADING,
+  LAUNCH_DATE_MS,
   LAUNCHER_GUIDES,
+  NAME_REQUEST_LABEL,
+  NAME_REQUEST_PLACEHOLDER,
+  NAME_REQUEST_VALIDATION,
   RESOURCE_LINKS,
   SERVER_ADDRESS,
   TROUBLESHOOTING,
+  TURNSTILE_LABEL,
+  TURNSTILE_REQUIRED,
+  TURNSTILE_UNAVAILABLE,
+  USERNAME_REQUEST_BODY,
+  USERNAME_REQUEST_EYEBROW,
   USERNAME_REQUEST_FAILURE,
+  USERNAME_REQUEST_HEADING,
   USERNAME_REQUEST_LABEL,
   USERNAME_REQUEST_PLACEHOLDER,
   USERNAME_REQUEST_SUBMIT,
@@ -22,26 +34,158 @@ import {
   USERNAME_REQUEST_VALIDATION,
   VERSION_LINE
 } from './content'
+import { loadTurnstile, type TurnstileClient, type TurnstileWidgetId } from './turnstile'
 
 type CopyState = 'idle' | 'copied' | 'failed'
 
 type UsernameSubmissionState = 'idle' | 'submitting' | 'submitted' | 'failed'
 
-function UsernameRequestForm() {
+type TurnstileWidgetProps = {
+  client?: TurnstileClient
+  siteKey: string
+  onReady: (ready: boolean) => void
+  onToken: (token: string) => void
+}
+
+function TurnstileWidget({ client: injectedClient, siteKey, onReady, onToken }: TurnstileWidgetProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<TurnstileWidgetId>()
+  const [status, setStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
+
+  useEffect(() => {
+    let active = true
+    let client: TurnstileClient | undefined
+
+    if (!siteKey) {
+      setStatus('unavailable')
+      onReady(false)
+      return () => {
+        active = false
+      }
+    }
+
+    const clientPromise = injectedClient ? Promise.resolve(injectedClient) : loadTurnstile()
+    clientPromise.then((resolvedClient) => {
+      if (!active || !containerRef.current) {
+        return
+      }
+
+      client = resolvedClient
+      try {
+        onReady(true)
+        setStatus('ready')
+        widgetIdRef.current = resolvedClient.render(containerRef.current, {
+          sitekey: siteKey,
+          callback: (token) => {
+            if (active) {
+              onToken(token)
+            }
+          },
+          'expired-callback': () => {
+            if (active) {
+              onToken('')
+            }
+          },
+          'error-callback': () => {
+            if (active) {
+              onToken('')
+            }
+          }
+        })
+      } catch {
+        if (active) {
+          setStatus('unavailable')
+          onReady(false)
+        }
+      }
+    }).catch(() => {
+      if (active) {
+        setStatus('unavailable')
+        onReady(false)
+      }
+    })
+
+    return () => {
+      active = false
+      if (client?.reset && widgetIdRef.current !== undefined) {
+        client.reset(widgetIdRef.current)
+      }
+      widgetIdRef.current = undefined
+    }
+  }, [injectedClient, onReady, onToken, siteKey])
+
+  return (
+    <div className="turnstile-widget" data-testid="turnstile-widget" data-sitekey={siteKey} role="group" aria-label="Cloudflare Turnstile security check">
+      <div ref={containerRef} />
+      <p className="turnstile-widget__status" aria-live="polite">
+        {status === 'loading' ? 'Loading security check…' : status === 'unavailable' ? TURNSTILE_UNAVAILABLE : ''}
+      </p>
+    </div>
+  )
+}
+
+type UsernameRequestFormProps = {
+  turnstileClient?: TurnstileClient
+  turnstileSiteKey: string
+}
+
+function UsernameRequestForm({ turnstileClient, turnstileSiteKey }: UsernameRequestFormProps) {
+  const [name, setName] = useState('')
   const [username, setUsername] = useState('')
+  const [turnstileReady, setTurnstileReady] = useState(false)
+  const [turnstileToken, setTurnstileToken] = useState('')
   const [submissionState, setSubmissionState] = useState<UsernameSubmissionState>('idle')
   const [submissionError, setSubmissionError] = useState('')
 
+  const handleTurnstileReady = useCallback((ready: boolean) => {
+    setTurnstileReady(ready)
+    if (!ready) {
+      setTurnstileToken('')
+    }
+  }, [])
+
+  const handleTurnstileToken = useCallback((token: string) => {
+    setTurnstileToken(token)
+  }, [])
+
   const submitUsername = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    setSubmissionState('submitting')
+    const trimmedName = name.trim()
+    const trimmedUsername = username.trim()
     setSubmissionError('')
+
+    if (trimmedName.length < 1 || trimmedName.length > 80) {
+      setSubmissionState('failed')
+      setSubmissionError(NAME_REQUEST_VALIDATION)
+      return
+    }
+    if (!/^[A-Za-z0-9_]{3,16}$/.test(trimmedUsername)) {
+      setSubmissionState('failed')
+      setSubmissionError(USERNAME_REQUEST_VALIDATION)
+      return
+    }
+    if (!turnstileReady) {
+      setSubmissionState('failed')
+      setSubmissionError(TURNSTILE_UNAVAILABLE)
+      return
+    }
+    if (!turnstileToken) {
+      setSubmissionState('failed')
+      setSubmissionError(TURNSTILE_REQUIRED)
+      return
+    }
+
+    setSubmissionState('submitting')
 
     try {
       const response = await fetch('/api/usernames', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim() })
+        body: JSON.stringify({
+          name: trimmedName,
+          username: trimmedUsername,
+          turnstileToken
+        })
       })
       let payload: unknown = null
       try {
@@ -71,29 +215,69 @@ function UsernameRequestForm() {
   }
 
   return (
-    <form className="username-form" onSubmit={submitUsername}>
-      <label className="username-form__label" htmlFor="minecraft-username">
-        {USERNAME_REQUEST_LABEL}
-      </label>
-      <p className="username-form__help" id="username-help">
-        {USERNAME_REQUEST_VALIDATION}
-      </p>
-      <div className="username-form__row">
-        <input
-          id="minecraft-username"
-          name="username"
-          type="text"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-          placeholder={USERNAME_REQUEST_PLACEHOLDER}
-          minLength={3}
-          maxLength={16}
-          pattern="[A-Za-z0-9_]{3,16}"
-          autoComplete="nickname"
-          required
-          aria-describedby="username-help username-status"
-          disabled={submissionState === 'submitting'}
+    <form className="username-form" onSubmit={submitUsername} noValidate>
+      <div className="username-form__fields">
+        <div className="username-form__field">
+          <label className="username-form__label" htmlFor="requester-name">
+            {NAME_REQUEST_LABEL}
+          </label>
+          <input
+            id="requester-name"
+            name="name"
+            type="text"
+            value={name}
+            onChange={(event) => {
+              setName(event.target.value)
+              setSubmissionError('')
+            }}
+            placeholder={NAME_REQUEST_PLACEHOLDER}
+            maxLength={80}
+            autoComplete="name"
+            required
+            aria-describedby="name-help username-status"
+            disabled={submissionState === 'submitting'}
+          />
+          <p className="username-form__help" id="name-help">
+            Use the name your friends know you by.
+          </p>
+        </div>
+        <div className="username-form__field">
+          <label className="username-form__label" htmlFor="minecraft-username">
+            {USERNAME_REQUEST_LABEL}
+          </label>
+          <input
+            id="minecraft-username"
+            name="username"
+            type="text"
+            value={username}
+            onChange={(event) => {
+              setUsername(event.target.value)
+              setSubmissionError('')
+            }}
+            placeholder={USERNAME_REQUEST_PLACEHOLDER}
+            minLength={3}
+            maxLength={16}
+            pattern="[A-Za-z0-9_]{3,16}"
+            autoComplete="nickname"
+            required
+            aria-describedby="username-help username-status"
+            disabled={submissionState === 'submitting'}
+          />
+          <p className="username-form__help" id="username-help">
+            {USERNAME_REQUEST_VALIDATION}
+          </p>
+        </div>
+      </div>
+      <div className="username-form__captcha">
+        <p className="username-form__label">{TURNSTILE_LABEL}</p>
+        <TurnstileWidget
+          client={turnstileClient}
+          siteKey={turnstileSiteKey}
+          onReady={handleTurnstileReady}
+          onToken={handleTurnstileToken}
         />
+      </div>
+      <div className="username-form__row">
         <button className="copy-button" type="submit" disabled={submissionState === 'submitting'}>
           {submissionState === 'submitting' ? USERNAME_REQUEST_SUBMITTING : USERNAME_REQUEST_SUBMIT}
         </button>
@@ -107,6 +291,76 @@ function UsernameRequestForm() {
         {submissionState === 'failed' ? submissionError : ''}
       </p>
     </form>
+  )
+}
+
+type CountdownSnapshot = {
+  isLive: boolean
+  days: number
+  hours: number
+  minutes: number
+  seconds: number
+}
+
+export function getCountdownSnapshot(nowMs: number, launchMs = LAUNCH_DATE_MS): CountdownSnapshot {
+  const remainingMs = launchMs - nowMs
+  if (remainingMs <= 0) {
+    return { isLive: true, days: 0, hours: 0, minutes: 0, seconds: 0 }
+  }
+
+  const totalSeconds = Math.floor(remainingMs / 1000)
+  const days = Math.floor(totalSeconds / 86400)
+  const hours = Math.floor((totalSeconds % 86400) / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  return { isLive: false, days, hours, minutes, seconds }
+}
+
+type LaunchCountdownProps = {
+  now?: () => number
+}
+
+export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
+  const [snapshot, setSnapshot] = useState(() => getCountdownSnapshot(now()))
+
+  useEffect(() => {
+    const update = () => setSnapshot(getCountdownSnapshot(now()))
+    update()
+    const timer = window.setInterval(update, 1000)
+    return () => window.clearInterval(timer)
+  }, [now])
+
+  return (
+    <section className="ruled-band countdown-band" id="launch" aria-labelledby="countdown-heading">
+      <div className="page-frame countdown-band__inner">
+        <div className="section-intro">
+          <p className="eyebrow">{COUNTDOWN_EYEBROW}</p>
+          <h2 id="countdown-heading">{COUNTDOWN_HEADING}</h2>
+          <p>{COUNTDOWN_BODY}</p>
+        </div>
+        <div
+          className={snapshot.isLive ? 'launch-countdown launch-countdown--live' : 'launch-countdown'}
+          role="timer"
+          aria-live="polite"
+          aria-atomic="true"
+          aria-label={snapshot.isLive ? COUNTDOWN_LIVE : COUNTDOWN_WAITING}
+        >
+          {snapshot.isLive ? (
+            <p className="launch-countdown__live" role="status">{COUNTDOWN_LIVE}</p>
+          ) : (
+            <>
+              <p className="launch-countdown__label">{COUNTDOWN_WAITING}</p>
+              <dl className="launch-countdown__units">
+                <div><dt>Days</dt><dd>{String(snapshot.days).padStart(2, '0')}</dd></div>
+                <div><dt>Hours</dt><dd>{String(snapshot.hours).padStart(2, '0')}</dd></div>
+                <div><dt>Minutes</dt><dd>{String(snapshot.minutes).padStart(2, '0')}</dd></div>
+                <div><dt>Seconds</dt><dd>{String(snapshot.seconds).padStart(2, '0')}</dd></div>
+              </dl>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -154,9 +408,17 @@ function FieldGuideArt() {
   )
 }
 
-export function CozyFriendsApp() {
-  const [copyState, setCopyState] = useState<CopyState>('idle')
+export type CozyFriendsAppProps = {
+  now?: () => number
+  clock?: () => number
+  turnstileClient?: TurnstileClient
+  turnstileSiteKey?: string
+}
 
+export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }: CozyFriendsAppProps = {}) {
+  const configuredTurnstileSiteKey = (turnstileSiteKey ?? import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '').trim()
+  const countdownNow = now ?? clock
+  const [copyState, setCopyState] = useState<CopyState>('idle')
   const copyServerAddress = async () => {
     setCopyState('idle')
     try {
@@ -187,6 +449,7 @@ export function CozyFriendsApp() {
             <span>Cozy Friends</span>
           </a>
           <nav className="site-nav" aria-label="Field guide navigation">
+            <a href="#launch">Launch</a>
             <a href="#install">Install</a>
             <a href="#connect">Connect</a>
             <a href="#troubleshooting">Help</a>
@@ -218,12 +481,15 @@ export function CozyFriendsApp() {
                     {copyLabel}
                   </button>
                 </div>
+
               </div>
               <p className="invite-note">{INVITE_NOTE}</p>
             </div>
             <FieldGuideArt />
           </div>
         </section>
+
+        <LaunchCountdown now={countdownNow} />
 
         <section className="ruled-band request-band" id="request" aria-labelledby="request-heading">
           <div className="page-frame split-band">
@@ -232,7 +498,7 @@ export function CozyFriendsApp() {
               <h2 id="request-heading">{USERNAME_REQUEST_HEADING}</h2>
               <p>{USERNAME_REQUEST_BODY}</p>
             </div>
-            <UsernameRequestForm />
+            <UsernameRequestForm turnstileClient={turnstileClient} turnstileSiteKey={configuredTurnstileSiteKey} />
           </div>
         </section>
 
@@ -252,6 +518,7 @@ export function CozyFriendsApp() {
                     <span className="launcher-guide__name">{guide.name}:</span>{' '}
                     {guide.instructions}
                   </p>
+                  <ExternalLink className="launcher-guide__link" href={guide.href}>{guide.linkLabel}</ExternalLink>
                 </li>
               ))}
             </ol>

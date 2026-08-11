@@ -320,6 +320,41 @@ li {
   max-width: 660px;
 }
 
+.username-form__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.username-form__field {
+  min-width: 0;
+}
+
+.username-form__field input {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.username-form__captcha {
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--soft-rule);
+}
+
+.turnstile-widget {
+  min-height: 78px;
+  margin-top: 10px;
+}
+
+.turnstile-widget__status {
+  min-height: 20px;
+  margin-top: 8px;
+  color: var(--moss);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .username-form__label {
   display: block;
   color: var(--dark-moss);
@@ -786,6 +821,76 @@ li {
   max-width: 610px;
 }
 
+
+.countdown-band {
+  padding: clamp(56px, 8vw, 92px) 0;
+}
+
+.countdown-band__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(360px, 1.2fr);
+  gap: clamp(36px, 8vw, 120px);
+  align-items: center;
+}
+
+.launch-countdown {
+  min-width: 0;
+  padding: clamp(22px, 4vw, 38px);
+  border: 1px solid var(--dark-moss);
+  border-radius: 4px;
+  background: var(--dark-moss);
+  color: var(--parchment);
+  box-shadow: 6px 6px 0 var(--wheat);
+}
+
+.launch-countdown__label {
+  color: var(--sky);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.launch-countdown__units {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 0;
+}
+
+.launch-countdown__units > div {
+  min-width: 0;
+  padding-top: 12px;
+  border-top: 1px solid rgba(244, 237, 218, 0.35);
+}
+
+.launch-countdown__units dt {
+  color: var(--sky);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.launch-countdown__units dd {
+  margin: 7px 0 0;
+  color: var(--parchment);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(1.45rem, 4vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.launch-countdown--live {
+  background: var(--wheat);
+  color: var(--dark-moss);
+}
+
+.launch-countdown__live {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+  line-height: 1.1;
+}
 .section-intro h2,
 .community-band h2,
 .resources-band h2 {
@@ -854,6 +959,22 @@ li {
 
 .launcher-guide__name {
   font-weight: 800;
+}
+
+.launcher-guide__link {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 18px;
+  color: var(--dark-moss);
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.launcher-guide__link:hover {
+  color: var(--clay);
 }
 
 .resource-link {
@@ -1097,6 +1218,15 @@ li {
     grid-template-columns: 1fr;
   }
 
+  .countdown-band__inner {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .username-form__fields {
+    grid-template-columns: 1fr;
+  }
+
   .hero-grid {
     gap: 52px;
     padding-top: 56px;
@@ -1150,6 +1280,9 @@ li {
 }
 
 @media (max-width: 500px) {
+  .launch-countdown__units {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .page-frame {
     width: min(var(--frame), calc(100% - 32px));
   }

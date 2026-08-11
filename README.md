@@ -101,15 +101,21 @@ flowchart TB
 ```
 
 See [Architecture](docs/14-architecture.md) for the larger system context and cluster container view.
-## Planned Cozy Friends routes (gated)
 
-The repository contains a runbook and manifests for a Homestead 1.3.7
-server, but this is not a public-launch claim. The companion guide is live;
-Minecraft launch remains blocked until the Kubernetes workload, router TCP
-rule, Cloudflare DDNS secret, EULA/allowlist, backup-restore, client, and
-outside-network monitor gates are proven. The LAN-verified MetalLB candidate
-VIP is `10.0.0.254/32`: the router DHCP pool is `10.0.0.2`–`10.0.0.253`,
-and `.254` was absent from the lease page, ARP, and ping at preflight.
+## Cozy Friends routes (gated)
+
+The companion guide and token-authenticated approval API are live behind the
+existing Cloudflare Tunnel, but this is not a public Minecraft-launch claim.
+The friend-facing promise is a shared Homestead world for **chilling, building,
+and adventuring with friends**. The guide shows a live countdown to
+**Thursday, August 13, 2026 at 8:00 PM Eastern Daylight Time (EDT,
+UTC−04:00)**; August is EDT rather than UTC−05:00.
+
+The guide recommends **only CurseForge** for clients. Use the official
+[Homestead 1.3.7 CurseForge file](https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152):
+install the CurseForge app, search for Homestead, choose `1.3.7`, allocate
+`8 GiB` client RAM, and launch. No Prism Launcher, Modrinth App, or
+reconstructed-pack path is presented as an alternate launcher instruction.
 
 ```text
 Minecraft Java -> DNS-only mc.popinvites.com -> home WAN IPv4
@@ -119,27 +125,46 @@ Browser -> proxied *.popinvites.com -> existing Cloudflare Tunnel
         -> ingress-nginx -> cozy.popinvites.com Ingress -> Cozy guide Service
 ```
 
-`mc.popinvites.com` must remain an explicit gray-cloud/DNS-only record. The
-`cozy.popinvites.com` guide remains behind the existing proxied wildcard; no
-second tunnel or Access policy is planned. Longhorn's replica count 1 provides
-persistent storage, not high availability. Application-aware Restic backups
-are the primary recovery path, with Longhorn snapshots/backups as secondary
-disaster recovery.
+Infrastructure evidence currently recorded includes the Argo-synced guide/API
+returning HTTP 200, the installed MetalLB chart and production
+`minecraft-public` pool at the LAN-verified `10.0.0.254/32`, the ready
+Homestead pod, the DNS-only `mc` record, and the owner's accepted EULA. The
+VIP is outside the router DHCP range (`.2`–`.253`) and has a ready local
+endpoint. These facts do not prove a public Minecraft client, WAN forwarding,
+backup restore, or outside-network monitor.
+
+Remaining owner/operator launch gates are explicit:
+
+1. The owner adds only WAN TCP `25565` -> `10.0.0.254:25565` in the Rogers
+   Xfinity app; no UDP, RCON, NodePort, or admin forwarding.
+2. A person submits their name and exact, case-sensitive Java username through
+   the Turnstile-protected form; the owner approves the owner row and confirms
+   the local allowlist entry.
+3. The operator proves an application-aware backup and throwaway restore with
+   a known world marker.
+4. After the LAN test, the owner joins from outside the home network with the
+   CurseForge profile and activates five-minute UptimeRobot TCP/HTTPS checks.
+
+The form sends `POST /api/usernames` JSON
+`{"name":"...","username":"...","turnstileToken":"..."}`. The API accepts
+`name` only from 1–80 characters, `username` only when it matches
+`^[A-Za-z0-9_]{3,16}$`, verifies Turnstile Siteverify for hostname
+`cozy.popinvites.com`, and persists `requester_name` plus `username` in the
+CloudNativePG-backed database. The owner reviews pending requests at
+`cozy.popinvites.com/#admin`; approved names reach Minecraft through the
+internal feed and localhost-only RCON. The API is ClusterIP-only: no public
+API Service, RCON Service, or router exposure is allowed.
+
+`VITE_TURNSTILE_SITE_KEY` is public browser build configuration.
+`TURNSTILE_SECRET_KEY` is private SOPS-managed runtime data and must never be
+printed, committed, or bundled. Longhorn's replica count 1 provides persistent
+storage, not high availability; application-aware Restic backups are the
+primary recovery path, with Longhorn snapshots/backups as secondary disaster
+recovery.
 
 See [Cozy Friends Server](docs/19-cozy-friends-server.md) for the gated
-runbook, edge settings, and rollback order.
-
-Username access is handled by the runbook's approval workflow: friends submit
-an exact Java username on the public guide, while the owner reviews requests
-at `cozy.popinvites.com/#admin` with a token held in SOPS. Requests persist in
-the private CloudNativePG database, and a token-authenticated in-cluster
-reconciler adds approved names to Minecraft through localhost-only RCON every
-60 seconds. The public API route uses the same-host site Ingress; its
-ClusterIP is internal for the site and whitelist sidecar. No publicly exposed
-API Service, RCON Service, or router exposure is allowed. See
-[Username approval and whitelist operations](docs/19-cozy-friends-server.md#14-username-approval-and-whitelist-operations)
-for secret rotation, rollout ordering, duplicate/status semantics, and
-troubleshooting without printing credentials.
+runbook, edge settings, secret rotation, approval migration, and rollback
+order.
 
 ## Why Talos?
 
