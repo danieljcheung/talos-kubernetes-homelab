@@ -94,6 +94,16 @@ spec:
                 path: assets/app.js
               - key: app.css
                 path: assets/app.css
+              - key: cozy-calendar.webp
+                path: assets/cozy-calendar.webp
+              - key: cozy-connect.webp
+                path: assets/cozy-connect.webp
+              - key: cozy-download.webp
+                path: assets/cozy-download.webp
+              - key: cozy-hero.webp
+                path: assets/cozy-hero.webp
+              - key: cozy-user.webp
+                path: assets/cozy-user.webp
         - name: nginx-cache
           emptyDir: {}
         - name: nginx-run

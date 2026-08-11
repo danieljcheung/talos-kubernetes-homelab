@@ -10,6 +10,18 @@ const __dirname = path.dirname(__filename);
 export const REPO_ROOT = path.resolve(__dirname, '..');
 export const DEFAULT_DIST_DIR = path.join(REPO_ROOT, 'site', 'dist');
 export const DEFAULT_CONFIGMAP_PATH = path.join(REPO_ROOT, 'manifests', 'nginx', 'configmap.yaml');
+export const CONFIGMAP_SIZE_LIMIT_BYTES = 1024 * 1024;
+export const BASE64_LINE_WIDTH = 76;
+
+// Cozy intentionally has a small, fixed binary-asset contract. Keep these
+// names as ConfigMap keys; the Deployment maps each key below /assets/.
+export const COZY_BINARY_ASSET_NAMES = Object.freeze([
+  'cozy-calendar.webp',
+  'cozy-connect.webp',
+  'cozy-download.webp',
+  'cozy-hero.webp',
+  'cozy-user.webp'
+]);
 
 /**
  * Resolve a CLI path relative to the repository rather than the caller's cwd.
@@ -75,14 +87,13 @@ export function parseConfigMap(yamlText) {
 
   let currentSection = 'header'; // 'header', 'data', 'binaryData'
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Check for section transitions
+  for (const line of lines) {
     if (line.startsWith('data:')) {
       currentSection = 'data';
       result.dataLines = [];
       continue;
-    } else if (line.startsWith('binaryData:')) {
+    }
+    if (line.startsWith('binaryData:')) {
       currentSection = 'binaryData';
       result.binaryDataLines = [];
       continue;
@@ -92,7 +103,7 @@ export function parseConfigMap(yamlText) {
       result.headerLines.push(line);
     } else if (currentSection === 'data') {
       result.dataLines.push(line);
-    } else if (currentSection === 'binaryData') {
+    } else {
       result.binaryDataLines.push(line);
     }
   }
@@ -100,46 +111,173 @@ export function parseConfigMap(yamlText) {
   return result;
 }
 
-export function generateConfigMapYaml(parsed, newFiles) {
-  let yaml = '';
-  // Header lines
-  yaml += parsed.headerLines.join('\n');
-  if (parsed.headerLines.length > 0 && !yaml.endsWith('\n')) {
-    yaml += '\n';
+const DATA_KEY_ORDER = Object.freeze(['index.html', 'app.js', 'app.css']);
+
+function compareKeys(left, right) {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function compareDataKeys([left], [right]) {
+  const leftIndex = DATA_KEY_ORDER.indexOf(left);
+  const rightIndex = DATA_KEY_ORDER.indexOf(right);
+  if (leftIndex !== -1 || rightIndex !== -1) {
+    if (leftIndex === -1) return 1;
+    if (rightIndex === -1) return -1;
+    return leftIndex - rightIndex;
   }
-  // data section
-  yaml += 'data:\n';
-  for (const [filename, content] of Object.entries(newFiles)) {
+  return compareKeys(left, right);
+}
+
+function appendTextData(yaml, newFiles) {
+  const entries = Object.entries(newFiles).sort(compareDataKeys);
+  for (const [filename, content] of entries) {
     yaml += `  ${filename}: |\n`;
-    const lines = content.replace(/\r/g, '').split('\n');
+    const lines = String(content).replace(/\r/g, '').split('\n');
     if (lines.length > 0 && lines[lines.length - 1] === '') {
       lines.pop();
     }
-    const indented = lines.map(line => line.length > 0 ? `    ${line}` : '').join('\n');
-    yaml += indented + '\n';
+    yaml += lines.map((line) => line.length > 0 ? `    ${line}` : '').join('\n');
+    yaml += '\n';
   }
-  // binaryData section
-  if (parsed.binaryDataLines) {
+  return yaml;
+}
+
+function binaryValueToBuffer(value) {
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+  if (value instanceof Uint8Array) {
+    return Buffer.from(value);
+  }
+  if (typeof value === 'string') {
+    return Buffer.from(value);
+  }
+  throw new TypeError('Binary asset contents must be a Buffer, Uint8Array, or string.');
+}
+
+export function renderBinaryData(binaryFiles) {
+  let yaml = '';
+  for (const [filename, value] of Object.entries(binaryFiles).sort(([left], [right]) => compareKeys(left, right))) {
+    const encoded = binaryValueToBuffer(value).toString('base64');
+    yaml += `  ${filename}: |\n`;
+    if (encoded.length === 0) {
+      yaml += '    \n';
+      continue;
+    }
+    for (let index = 0; index < encoded.length; index += BASE64_LINE_WIDTH) {
+      yaml += `    ${encoded.slice(index, index + BASE64_LINE_WIDTH)}\n`;
+    }
+  }
+  return yaml;
+}
+
+export function assertConfigMapSize(yaml, maxBytes = CONFIGMAP_SIZE_LIMIT_BYTES) {
+  const byteLength = Buffer.byteLength(yaml, 'utf8');
+  if (byteLength >= maxBytes) {
+    throw new Error(
+      `ConfigMap output is ${byteLength} bytes; it must remain below ${maxBytes} bytes (1 MiB Kubernetes limit).`
+    );
+  }
+  return byteLength;
+}
+
+export function generateConfigMapYaml(parsed, newFiles, binaryFiles) {
+  let yaml = parsed.headerLines.join('\n');
+  if (parsed.headerLines.length > 0 && !yaml.endsWith('\n')) {
+    yaml += '\n';
+  }
+
+  yaml += 'data:\n';
+  yaml = appendTextData(yaml, newFiles);
+
+  if (binaryFiles !== undefined) {
+    yaml += 'binaryData:\n';
+    yaml += renderBinaryData(binaryFiles);
+  } else if (parsed.binaryDataLines) {
+    // The portfolio ConfigMap owns a pre-existing resume PDF. Preserve its
+    // block scalar byte-for-byte unless a build explicitly supplies binaries.
     yaml += 'binaryData:\n';
     yaml += parsed.binaryDataLines.join('\n');
     if (parsed.binaryDataLines.length > 0 && !yaml.endsWith('\n')) {
       yaml += '\n';
     }
   }
+
+  assertConfigMapSize(yaml);
   return yaml;
 }
 
-export function runSyncOrCheck({ configMapPath, distDir, checkMode, fsInject = fs }) {
+function walkFiles(directory, rootDirectory, fsInject) {
+  const entries = fsInject.readdirSync(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const name = typeof entry === 'string' ? entry : entry.name;
+    const absolutePath = path.join(directory, name);
+    const relativePath = path.relative(rootDirectory, absolutePath).split(path.sep).join('/');
+    const isDirectory = typeof entry !== 'string'
+      && typeof entry.isDirectory === 'function'
+      && entry.isDirectory();
+    if (isDirectory) {
+      files.push(...walkFiles(absolutePath, rootDirectory, fsInject));
+    } else {
+      files.push({ absolutePath, relativePath });
+    }
+  }
+  return files;
+}
+
+export function discoverBinaryAssets({ distDir, expectedAssetNames = COZY_BINARY_ASSET_NAMES, fsInject = fs }) {
+  const assetFiles = walkFiles(distDir, distDir, fsInject).sort(
+    ({ relativePath: left }, { relativePath: right }) => compareKeys(left, right)
+  );
+  const expectedNames = [...new Set(expectedAssetNames)].sort(compareKeys);
+  const expectedPaths = expectedNames.map((name) => `assets/${name}`);
+  const actualPaths = new Set(assetFiles.map(({ relativePath }) => relativePath));
+  const allowedPaths = new Set([
+    'index.html',
+    'assets/app.js',
+    'assets/app.css',
+    ...expectedPaths
+  ]);
+  const missing = expectedPaths.filter((relativePath) => !actualPaths.has(relativePath));
+  const unexpected = assetFiles
+    .filter(({ relativePath }) => !allowedPaths.has(relativePath))
+    .map(({ relativePath }) => relativePath);
+  if (missing.length > 0) {
+    throw new Error(`Missing binary asset files:\n${missing.map((file) => `  - ${file}`).join('\n')}`);
+  }
+  if (unexpected.length > 0) {
+    throw new Error(
+      `Unexpected Cozy build assets (the generator would omit them):\n${unexpected.map((file) => `  - ${file}`).join('\n')}`
+    );
+  }
+
+  return Object.fromEntries(expectedPaths.map((relativePath) => {
+    const file = assetFiles.find(({ relativePath: candidate }) => candidate === relativePath);
+    return [path.basename(relativePath), fsInject.readFileSync(file.absolutePath)];
+  }));
+}
+
+function usesCozyBinaryContract(distDir, configMapPath) {
+  return path.basename(path.resolve(distDir)) === 'dist-cozy'
+    || path.normalize(configMapPath).split(path.sep).includes('cozy-friends-site');
+}
+
+export function runSyncOrCheck({
+  configMapPath,
+  distDir,
+  checkMode,
+  binaryAssetNames,
+  fsInject = fs
+}) {
   const requiredFiles = {
     'index.html': path.join(distDir, 'index.html'),
     'app.js': path.join(distDir, 'assets', 'app.js'),
     'app.css': path.join(distDir, 'assets', 'app.css'),
   };
 
-  // 1. Verify build outputs exist
   const missingFiles = [];
   const fileContents = {};
-
   for (const [key, filePath] of Object.entries(requiredFiles)) {
     if (!fsInject.existsSync(filePath)) {
       missingFiles.push(filePath);
@@ -147,33 +285,32 @@ export function runSyncOrCheck({ configMapPath, distDir, checkMode, fsInject = f
       fileContents[key] = fsInject.readFileSync(filePath, 'utf8');
     }
   }
-
   if (missingFiles.length > 0) {
-    throw new Error(`Missing build output files:\n${missingFiles.map(f => `  - ${f}`).join('\n')}`);
+    throw new Error(`Missing build output files:\n${missingFiles.map((file) => `  - ${file}`).join('\n')}`);
   }
 
-  // 2. Read existing ConfigMap
+  const expectedBinaryNames = binaryAssetNames
+    ?? (usesCozyBinaryContract(distDir, configMapPath) ? COZY_BINARY_ASSET_NAMES : []);
+  const binaryFiles = expectedBinaryNames.length > 0
+    ? discoverBinaryAssets({ distDir, expectedAssetNames: expectedBinaryNames, fsInject })
+    : undefined;
+
   if (!fsInject.existsSync(configMapPath)) {
     throw new Error(`ConfigMap file not found at: ${configMapPath}`);
   }
   const originalYaml = fsInject.readFileSync(configMapPath, 'utf8');
-
-  // 3. Parse existing ConfigMap
   const parsed = parseConfigMap(originalYaml);
+  const newYaml = generateConfigMapYaml(parsed, fileContents, binaryFiles);
 
-  // 4. Generate new YAML
-  const newYaml = generateConfigMapYaml(parsed, fileContents);
-
-  // 5. Compare or Write
   if (checkMode) {
     if (originalYaml !== newYaml) {
       throw new Error('ConfigMap is stale. Run generator to sync.');
     }
     return { status: 'up-to-date', message: 'Success: ConfigMap is up to date and consistent with build outputs.' };
-  } else {
-    fsInject.writeFileSync(configMapPath, newYaml, 'utf8');
-    return { status: 'written', message: `Success: Generated ${configMapPath} from build outputs.` };
   }
+
+  fsInject.writeFileSync(configMapPath, newYaml, 'utf8');
+  return { status: 'written', message: `Success: Generated ${configMapPath} from build outputs.` };
 }
 
 // CLI runner

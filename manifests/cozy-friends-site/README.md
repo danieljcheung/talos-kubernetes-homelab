@@ -1,8 +1,9 @@
 # Cozy Friends companion site
 
 This directory delivers the static Cozy Friends guide at `cozy.popinvites.com`. The
-site source and Vite build live under `site/cozy`; this workload only serves the
-three generated browser assets from a restricted Kubernetes namespace.
+site source and Vite build live under `site/cozy`; this workload serves the three
+generated browser assets plus the five fixed WebP assets from a restricted
+Kubernetes namespace.
 
 ## Public guide contract
 
@@ -47,20 +48,26 @@ chat.
 - `app.js` from `site/dist-cozy/assets/app.js`
 - `app.css` from `site/dist-cozy/assets/app.css`
 
-The committed manifest begins with empty block-scalar values so it remains a
-valid, Kustomize-compatible ConfigMap before the first build. Do not sync this
-empty placeholder as the public site. Build and synchronize the ConfigMap before
-creating or syncing the Argo application:
+The Cozy-only `binaryData` section must contain exactly these five keys, encoded
+from the corresponding files in `site/dist-cozy/assets`:
 
-Export the public Turnstile browser key before building. `make build-cozy`
-versions the asset URLs from the current Git revision, which prevents the
-Cloudflare edge from serving a previous bundle after a deploy:
+- `cozy-calendar.webp`
+- `cozy-connect.webp`
+- `cozy-download.webp`
+- `cozy-hero.webp`
+- `cozy-user.webp`
+
+The Deployment projects each binary key to `/usr/share/nginx/html/assets/<key>`,
+which is the public `/assets/<key>` URL. Do not add placeholders or manually
+edit encoded values. The generator fails when a fixed asset is missing or an
+unexpected build asset would otherwise be omitted.
+
+The committed ConfigMap can remain without binary entries until the first
+complete build, but the workload is not ready to sync until all five WebP files
+exist and the generator has run:
 
 ```bash
 export VITE_TURNSTILE_SITE_KEY='<public site key from the Turnstile widget>'
-```
-
-```bash
 make build-cozy
 make sync-cozy
 make verify-cozy
@@ -78,11 +85,11 @@ node scripts/generate-configmap.mjs --check \
   --configmap manifests/cozy-friends-site/configmap.yaml
 ```
 
-The generator owns the ConfigMap `data` section. Do not manually edit the
-asset values; rebuild `site/cozy` and run the sync command instead. Keep the
-rendered ConfigMap below Kubernetes' 1 MiB object limit. The generated bundle
-must reference only the three mounted files and must not add font, image, or
-other asset keys without a matching workload mount and generator contract.
+The generator owns both ConfigMap sections and emits deterministic key order.
+It rejects rendered output at or above Kubernetes' 1 MiB object limit, so keep
+the complete generated manifest below that limit. Portfolio defaults continue
+to preserve their existing `binaryData` section and do not apply this Cozy
+five-file contract.
 
 ## Kubernetes delivery
 
@@ -184,8 +191,8 @@ issues.
 ## Files
 
 - `namespace.yaml`: restricted application namespace
-- `configmap.yaml`: generated `index.html`, `app.js`, and `app.css`
-- `deployment.yaml`: hardened one-replica unprivileged nginx workload
+- `configmap.yaml`: generated text assets plus the five fixed WebP `binaryData` keys
+- `deployment.yaml`: hardened one-replica nginx workload mounting all eight keys
 - `service.yaml`: internal port 80 to 8080 ClusterIP Service
 - `ingress.yaml`: `cozy.popinvites.com` nginx Ingress
 - `networkpolicy.yaml`: ingress-nginx-only ingress and default-deny egress

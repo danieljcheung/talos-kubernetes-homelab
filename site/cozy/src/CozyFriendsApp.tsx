@@ -338,7 +338,7 @@ export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
     <section className="ruled-band countdown-band" id="launch" aria-labelledby="countdown-heading">
       <div className="page-frame countdown-band__inner">
         <div className="countdown-meta" id="features">
-          <span className="countdown-meta__icon" aria-hidden="true" />
+          <img className="countdown-meta__icon" src="/assets/cozy-calendar.webp" alt="" aria-hidden="true" />
           <div>
             <p className="eyebrow">{COUNTDOWN_EYEBROW}</p>
             <h2 id="countdown-heading">{COUNTDOWN_HEADING}</h2>
@@ -387,31 +387,25 @@ function ExternalLink({ href, children, className }: ExternalLinkProps) {
   )
 }
 
+const JOIN_ICON_ASSETS = {
+  download: '/assets/cozy-download.webp',
+  user: '/assets/cozy-user.webp',
+  connect: '/assets/cozy-connect.webp'
+} as const
+
 function FieldGuideArt() {
   return (
-    <figure className="field-art" id="gallery" role="img" aria-labelledby="field-art-caption">
-      <div className="field-art__scene" aria-hidden="true">
-        <span className="field-art__sun" />
-        <span className="field-art__ridge field-art__ridge--back" />
-        <span className="field-art__ridge field-art__ridge--front" />
-        <span className="field-art__field" />
-        <span className="field-art__path" />
-        <span className="field-art__tree-trunk" />
-        <span className="field-art__tree-crown field-art__tree-crown--low" />
-        <span className="field-art__tree-crown field-art__tree-crown--high" />
-        <span className="field-art__cabin-wall" />
-        <span className="field-art__cabin-roof" />
-        <span className="field-art__cabin-door" />
-        <span className="field-art__cabin-window field-art__cabin-window--left" />
-        <span className="field-art__cabin-window field-art__cabin-window--right" />
-        <span className="field-art__smoke field-art__smoke--one" />
-        <span className="field-art__smoke field-art__smoke--two" />
-        <span className="field-art__fence field-art__fence--one" />
-        <span className="field-art__fence field-art__fence--two" />
-        <span className="field-art__fence field-art__fence--three" />
-      </div>
+    <figure className="field-art" id="gallery" role="img" aria-label="Field guide illustration of a cozy cabin beside a field, tree, and winding path.">
+      <img
+        className="field-art__image"
+        src="/assets/cozy-hero.webp"
+        width="1122"
+        height="1402"
+        alt=""
+        aria-hidden="true"
+      />
       <figcaption id="field-art-caption" className="sr-only">
-        Original CSS block art of a cabin beside a field, tree, and path.
+        Field guide illustration of a cozy cabin beside a field, tree, and winding path.
       </figcaption>
     </figure>
   )
@@ -508,7 +502,14 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
               {JOIN_STEPS.map((step) => (
                 <li className="join-step" key={step.number}>
                   <span className="join-step__number" aria-hidden="true">{step.number}</span>
-                  <span className={`join-step__icon join-step__icon--${step.icon}`} aria-hidden="true" />
+                  <img
+                    className="join-step__icon"
+                    src={JOIN_ICON_ASSETS[step.icon]}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    aria-hidden="true"
+                  />
                   <div className="join-step__copy">
                     <h3>{step.label}</h3>
                     <p>{step.copy}</p>

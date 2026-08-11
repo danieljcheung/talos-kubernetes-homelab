@@ -2,11 +2,12 @@ import { afterEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import CozyFriendsApp, { getCountdownSnapshot, type CozyFriendsAppProps } from './CozyFriendsApp'
 import {
+  COUNTDOWN_HEADING,
   COUNTDOWN_LIVE,
   HERO_BODY,
   HERO_HEADING,
-  LAUNCH_DATE_ISO,
   LAUNCH_DATE_MS,
+  LAUNCH_DATE_ISO,
   NAME_REQUEST_LABEL,
   NAME_REQUEST_PLACEHOLDER,
   SERVER_ADDRESS,
@@ -118,6 +119,37 @@ describe('Cozy Friends field guide', () => {
     const renderedPage = document.body.innerHTML
     expect(renderedPage).not.toMatch(/cozyfriends\.net/i)
     expect(renderedPage).not.toContain('June 15, 2025')
+  })
+  test('renders the fixed raster artwork with decorative image semantics', () => {
+    render(<CozyFriendsApp />)
+
+    const heroArtwork = screen.getByRole('img', { name: /.+/ })
+    const heroImage = within(heroArtwork).getByRole('presentation', { hidden: true })
+    expect(heroImage).toHaveAttribute('src', '/assets/cozy-hero.webp')
+    expect(heroImage).toHaveAttribute('alt', '')
+    expect(heroImage).toHaveAttribute('aria-hidden', 'true')
+
+    const countdownHeading = screen.getByRole('heading', { name: COUNTDOWN_HEADING })
+    const countdownSection = countdownHeading.closest('section')
+    expect(countdownSection).not.toBeNull()
+    const countdownIcon = within(countdownSection as HTMLElement).getByRole('presentation', { hidden: true })
+    expect(countdownIcon).toHaveAttribute('src', '/assets/cozy-calendar.webp')
+    expect(countdownIcon).toHaveAttribute('alt', '')
+    expect(countdownIcon).toHaveAttribute('aria-hidden', 'true')
+
+    const stepAssets = [
+      ['DOWNLOAD MOD PACK', '/assets/cozy-download.webp'],
+      ['SEND USERNAME', '/assets/cozy-user.webp'],
+      ['CONNECT TO SERVER', '/assets/cozy-connect.webp']
+    ] as const
+    for (const [label, asset] of stepAssets) {
+      const step = screen.getByRole('heading', { name: label }).closest('li')
+      expect(step).not.toBeNull()
+      const icon = within(step as HTMLElement).getByRole('presentation', { hidden: true })
+      expect(icon).toHaveAttribute('src', asset)
+      expect(icon).toHaveAttribute('alt', '')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+    }
   })
 
   test('shows the countdown immediately before launch and the live state at the boundary', () => {
