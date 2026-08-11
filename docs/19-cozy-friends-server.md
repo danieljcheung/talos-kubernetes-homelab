@@ -5,11 +5,12 @@ server and its public companion guide. It describes the repository-local
 implementation, verified live evidence, and remaining operator gates; it is
 not a public-launch claim.
 
-Current checkpoint: the MetalLB chart is installed, the separate Cozy guide
-is Argo-synced and reachable at `https://cozy.popinvites.com`, and the
-LAN-verified MetalLB candidate is `10.0.0.254/32`. The Minecraft workload,
-DDNS updater, router TCP rule, backup credentials, client path, and external
-monitor remain intentionally gated.
+Current checkpoint: the MetalLB chart is installed, the Cozy guide and
+token-authenticated approval API are Argo-synced and reachable at
+`https://cozy.popinvites.com`, and the LAN-verified MetalLB VIP is
+`10.0.0.254/32`. The Homestead pod is ready with the whitelist-sync sidecar;
+DDNS, router TCP forwarding, backup freshness/restore, client path, and
+external monitoring remain intentionally gated.
 
 Primary source links:
 
@@ -54,9 +55,10 @@ Verified at the current checkpoint:
    nodes are `Ready`, Longhorn is provisioned, and the existing monitoring,
    ingress-nginx, kube-proxy, and Cloudflare Tunnel paths were inspected.
 2. MetalLB chart `0.16.1` is installed; its controller and all three speakers
-   are `Ready`. A temporary selector-matching `LoadBalancer` Service received
-   `10.0.0.254`, and LAN TCP/HTTP probes succeeded; the temporary resources
-   were deleted. The production pool and gameplay Service remain unsynced.
+   are `Ready`. The production `minecraft-public` pool and
+   `homestead-gameplay` Service currently use `10.0.0.254`, and the Service
+   reports a ready local endpoint. LAN TCP/HTTP probes succeeded; WAN routing
+   remains a separate gate.
 3. The router LAN is `10.0.0.0/24` with DHCP `.2`–`.253`. Candidate
    `10.0.0.254` was absent from the router lease page, ARP, and ping.
 4. Router WAN IPv4 `99.227.195.189` matches the independent public IPv4 probe.
@@ -72,12 +74,12 @@ Remaining launch gates:
 
 1. Add only WAN TCP `25565` -> `10.0.0.254:25565` through the Rogers Xfinity
    app. Do not forward UDP, RCON, NodePorts, or admin ports.
-2. Enter the Cloudflare DNS API token, Minecraft RCON password, Restic
-   password/repository, and least-privilege S3/R2 values through local SOPS.
-3. Supply explicit EULA acceptance and exact case-sensitive Java usernames,
-   then create the allowlist before exposing the WAN rule.
-4. Stage the verified ZIP onto the private pack PVC, sync MetalLB and
-   Minecraft only after the secret is applied, and wait for a ready endpoint.
+2. Verify the RCON/Restic/S3 values through the local SOPS workflow and prove a
+   successful application-aware backup; keep the Longhorn backup target healthy.
+3. Supply exact case-sensitive Java usernames through the public approval form,
+   approve the owner account, and confirm the allowlist before exposing WAN.
+4. The verified ZIP is staged on the private pack PVC and the Homestead pod is
+   ready; retain the successful startup evidence through the first real client.
 5. Prove a known world marker through an application-aware backup, throwaway
    restore, and disconnected throwaway server start.
 6. Verify a LAN client through `mc.popinvites.com`, then activate and test
