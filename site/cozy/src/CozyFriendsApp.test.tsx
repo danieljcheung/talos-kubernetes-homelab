@@ -1,19 +1,14 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import CozyFriendsApp, { getCountdownSnapshot, type CozyFriendsAppProps } from './CozyFriendsApp'
 import {
-  COMMUNITY_LINE,
   COUNTDOWN_LIVE,
   HERO_BODY,
-  HERO_EYEBROW,
   HERO_HEADING,
-  INVITE_NOTE,
   LAUNCH_DATE_ISO,
   LAUNCH_DATE_MS,
-  LAUNCHER_GUIDES,
   NAME_REQUEST_LABEL,
   NAME_REQUEST_PLACEHOLDER,
-  RESOURCE_LINKS,
   SERVER_ADDRESS,
   TURNSTILE_REQUIRED,
   TURNSTILE_UNAVAILABLE,
@@ -21,8 +16,7 @@ import {
   USERNAME_REQUEST_LABEL,
   USERNAME_REQUEST_PLACEHOLDER,
   USERNAME_REQUEST_SUCCESS,
-  USERNAME_REQUEST_VALIDATION,
-  VERSION_LINE
+  USERNAME_REQUEST_VALIDATION
 } from './content'
 
 const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
@@ -88,31 +82,42 @@ afterEach(() => {
 })
 
 describe('Cozy Friends field guide', () => {
-  test('renders the exact server metadata, one CurseForge guide, and primary links', () => {
+  test('renders the reference field guide with current server details', () => {
     render(<CozyFriendsApp />)
 
+    expect(HERO_HEADING).toBe('A cozy place, built together.')
+    expect(HERO_BODY).toBe(
+      'A whitelisted Minecraft server for friends. Survive, build, explore, and make memories together.'
+    )
     expect(screen.getByRole('heading', { name: HERO_HEADING })).toBeInTheDocument()
-    expect(screen.getByText(HERO_EYEBROW)).toBeInTheDocument()
-    expect(screen.getByText(HERO_BODY)).toBeInTheDocument()
-    expect(screen.getByText(VERSION_LINE)).toBeInTheDocument()
-    expect(screen.getAllByText(SERVER_ADDRESS)).toHaveLength(2)
-    expect(screen.getByText(INVITE_NOTE)).toBeInTheDocument()
-    expect(screen.getByText(COMMUNITY_LINE)).toBeInTheDocument()
-    expect(LAUNCHER_GUIDES).toHaveLength(1)
+    expect(screen.getByRole('banner')).toHaveTextContent('A MINECRAFT SERVER')
+    expect(screen.getByText(/A whitelisted Minecraft server for friends\./)).toBeInTheDocument()
+    expect(screen.getByText(/Survive, build, explore, and make memories together\./)).toBeInTheDocument()
 
-    const [guide] = LAUNCHER_GUIDES
-    expect(screen.getByRole('heading', { name: guide.name })).toBeInTheDocument()
-    expect(screen.getByText(new RegExp(guide.instructions.slice(0, 30)))).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: guide.linkLabel })).toHaveAttribute('href', guide.href)
-    expect(screen.queryByRole('heading', { name: 'Prism Launcher' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Modrinth App' })).not.toBeInTheDocument()
-
-    for (const resource of RESOURCE_LINKS) {
-      const link = screen.getByRole('link', { name: resource.label })
-      expect(link).toHaveAttribute('href', resource.href)
-      expect(link).toHaveAttribute('target', '_blank')
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    const navigation = screen.getByRole('navigation')
+    for (const label of ['HOME', 'ABOUT', 'FEATURES', 'GALLERY', 'JOIN']) {
+      expect(within(navigation).getByRole('link', { name: label, exact: true })).toBeInTheDocument()
     }
+    expect(within(navigation).getByRole('link', { name: 'HOME', exact: true })).toHaveAttribute('aria-current', 'page')
+
+    expect(screen.getByRole('link', { name: 'JOIN COZY FRIENDS' })).toHaveAttribute('href', '#request')
+    expect(screen.getAllByText(SERVER_ADDRESS, { exact: true }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Copy server address' })).toBeInTheDocument()
+    expect(document.body).toHaveTextContent('August 13, 2026')
+    expect(document.body).toHaveTextContent('8:00 PM EDT')
+
+    for (const label of ['DOWNLOAD MOD PACK', 'SEND USERNAME', 'CONNECT TO SERVER']) {
+      expect(screen.getByText(label, { exact: true })).toBeInTheDocument()
+    }
+
+    expect(screen.getByRole('link', { name: 'Open CurseForge', exact: true })).toHaveAttribute(
+      'href',
+      'https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152'
+    )
+
+    const renderedPage = document.body.innerHTML
+    expect(renderedPage).not.toMatch(/cozyfriends\.net/i)
+    expect(renderedPage).not.toContain('June 15, 2025')
   })
 
   test('shows the countdown immediately before launch and the live state at the boundary', () => {
@@ -166,11 +171,15 @@ describe('Cozy Friends field guide', () => {
     renderWithTurnstile()
     await act(async () => {})
 
-    expect(screen.getByLabelText(NAME_REQUEST_LABEL)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(NAME_REQUEST_PLACEHOLDER)).toBeInTheDocument()
-    expect(screen.getByLabelText(USERNAME_REQUEST_LABEL)).toBeInTheDocument()
+    const nameField = screen.getByRole('textbox', { name: NAME_REQUEST_LABEL })
+    const usernameField = screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL })
+    expect(nameField).toHaveAttribute('id', 'requester-name')
+    expect(nameField).toHaveAttribute('name', 'name')
+    expect(screen.getByPlaceholderText(NAME_REQUEST_PLACEHOLDER)).toBe(nameField)
+    expect(usernameField).toHaveAttribute('id', 'minecraft-username')
+    expect(usernameField).toHaveAttribute('name', 'username')
     expect(screen.getByText(USERNAME_REQUEST_VALIDATION)).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(USERNAME_REQUEST_PLACEHOLDER)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(USERNAME_REQUEST_PLACEHOLDER)).toBe(usernameField)
     expect(screen.getByTestId('turnstile-widget')).toHaveAttribute('data-sitekey', 'test-site-key')
   })
 
@@ -179,8 +188,8 @@ describe('Cozy Friends field guide', () => {
     setFetch(fetchMock)
     render(<CozyFriendsApp turnstileSiteKey="" />)
 
-    fireEvent.change(screen.getByLabelText(NAME_REQUEST_LABEL), { target: { value: 'Dan' } })
-    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), { target: { value: 'CozyDan_' } })
+    fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: 'Dan' } })
+    fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
@@ -195,8 +204,8 @@ describe('Cozy Friends field guide', () => {
     const turnstile = renderWithTurnstile()
     await act(async () => {})
 
-    fireEvent.change(screen.getByLabelText(NAME_REQUEST_LABEL), { target: { value: 'Dan' } })
-    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), { target: { value: 'CozyDan_' } })
+    fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: 'Dan' } })
+    fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
@@ -219,8 +228,8 @@ describe('Cozy Friends field guide', () => {
       turnstile.solve('test-turnstile-token')
     })
 
-    fireEvent.change(screen.getByLabelText(NAME_REQUEST_LABEL), { target: { value: ' Dan ' } })
-    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), { target: { value: 'CozyDan_' } })
+    fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: ' Dan ' } })
+    fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
@@ -244,8 +253,8 @@ describe('Cozy Friends field guide', () => {
       turnstile.solve()
     })
 
-    fireEvent.change(screen.getByLabelText(NAME_REQUEST_LABEL), { target: { value: 'Dan' } })
-    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), { target: { value: 'CozyDan_' } })
+    fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: 'Dan' } })
+    fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
@@ -262,8 +271,8 @@ describe('Cozy Friends field guide', () => {
       turnstile.solve()
     })
 
-    fireEvent.change(screen.getByLabelText(NAME_REQUEST_LABEL), { target: { value: 'Dan' } })
-    fireEvent.change(screen.getByLabelText(USERNAME_REQUEST_LABEL), { target: { value: 'CozyDan_' } })
+    fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: 'Dan' } })
+    fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })

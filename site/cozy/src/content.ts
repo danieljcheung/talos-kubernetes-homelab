@@ -1,17 +1,44 @@
 export const SERVER_ADDRESS = 'mc.popinvites.com'
-export const HERO_EYEBROW = 'COZY FRIENDS SERVER'
-export const HERO_HEADING = 'Build slow. Wander far. Come home.'
-export const HERO_BODY = 'A shared Homestead world for chilling, building, and adventuring with friends.'
-export const VERSION_LINE = 'Homestead 1.3.7 • Minecraft 1.20.1 • Fabric • Java Edition'
-export const INVITE_NOTE = 'Invite-only. Ask Dan to add your exact Minecraft username before joining.'
+export const HERO_HEADING = 'A cozy place, built together.'
+export const HERO_BODY = 'A whitelisted Minecraft server for friends. Survive, build, explore, and make memories together.'
 export const LAUNCH_DATE_ISO = '2026-08-13T20:00:00-04:00'
 export const LAUNCH_DATE_MS = Date.parse(LAUNCH_DATE_ISO)
-export const COUNTDOWN_EYEBROW = 'COUNTDOWN TO LAUNCH'
-export const COUNTDOWN_HEADING = 'The first campfire is almost ready.'
-export const COUNTDOWN_BODY = 'We open the Homestead world on Thursday, August 13 at 8:00 PM Eastern.'
+export const COUNTDOWN_EYEBROW = 'OFFICIAL LAUNCH'
+export const COUNTDOWN_HEADING = 'August 13, 2026 · 8:00 PM EDT'
+export const COUNTDOWN_BODY = 'The first campfire is almost ready.'
 export const COUNTDOWN_LIVE = 'Launch is live. Welcome to the world.'
 export const COUNTDOWN_WAITING = 'Time until launch'
 export const COUNTDOWN_UNITS = ['days', 'hours', 'minutes', 'seconds'] as const
+
+export const JOIN_HEADING = 'HOW TO JOIN'
+export const JOIN_STEPS = [
+  {
+    number: '1',
+    icon: 'download',
+    label: 'DOWNLOAD MOD PACK',
+    copy: 'Install Homestead 1.3.7 through CurseForge.',
+    href: 'https://www.curseforge.com/minecraft/modpacks/homestead-cozy/files/8110152',
+    linkLabel: 'Open CurseForge'
+  },
+  {
+    number: '2',
+    icon: 'user',
+    label: 'SEND USERNAME',
+    copy: 'Submit your exact Java username for the allowlist.',
+    href: '#request',
+    linkLabel: 'Request access'
+  },
+  {
+    number: '3',
+    icon: 'connect',
+    label: 'CONNECT TO SERVER',
+    copy: 'Join the world using the address below.',
+    href: undefined,
+    linkLabel: ''
+  }
+] as const
+
+export const FOOTER_TAG = 'Good people. Cozy builds. Great times.'
 
 export const NAME_REQUEST_LABEL = 'Name'
 export const NAME_REQUEST_PLACEHOLDER = 'Your name'
@@ -38,54 +65,6 @@ export const OFFICIAL_LINKS = {
   serverPack: 'https://cozystudios.org/homestead/server-pack/'
 } as const
 
-export type LauncherGuide = {
-  name: string
-  instructions: string
-  href: string
-  linkLabel: string
-}
-
-export const LAUNCHER_GUIDES: readonly LauncherGuide[] = [
-  {
-    name: 'CurseForge',
-    instructions: 'Install the CurseForge app, search for Homestead, choose version 1.3.7, allocate 8 GiB client RAM, and launch.',
-    href: OFFICIAL_LINKS.curseforge,
-    linkLabel: 'Open Homestead 1.3.7 on CurseForge'
-  }
-]
-
-export const CONNECTION_STEPS = [
-  'Launch the Homestead 1.3.7 profile.',
-  'Choose Multiplayer, then Add Server.',
-  'Set the name to Cozy Friends Server and address to mc.popinvites.com.',
-  'Submit the username above, then join after Dan approves the allowlist entry.'
-] as const
-
-export const COMMUNITY_LINE = 'Build with care. Ask before borrowing. Repair creeper damage. Keep shared paths usable. Leave room for everyone.'
-
-export type TroubleshootingItem = {
-  label: string
-  guidance: string
-}
-
-export const TROUBLESHOOTING: readonly TroubleshootingItem[] = [
-  {
-    label: 'Incompatible mods',
-    guidance: 'confirm Homestead 1.3.7, Minecraft 1.20.1, Fabric, and the official Modrinth FTB additions.'
-  },
-  {
-    label: 'Not whitelisted',
-    guidance: 'Submit the exact case-sensitive Java username above, then wait for Dan to approve it.'
-  },
-  {
-    label: 'Java/startup crash',
-    guidance: 'use Java 17 and allocate 8 GiB, leaving memory for the launcher and operating system.'
-  },
-  {
-    label: 'Timeout',
-    guidance: 'confirm the server announcement before changing the pack or deleting local files.'
-  }
-]
 
 export const RESOURCE_LINKS = [
   { label: 'Modrinth version page', href: OFFICIAL_LINKS.modrinth },

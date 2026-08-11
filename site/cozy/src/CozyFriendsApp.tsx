@@ -1,24 +1,22 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
-  COMMUNITY_LINE,
-  CONNECTION_STEPS,
   COUNTDOWN_BODY,
   COUNTDOWN_EYEBROW,
   COUNTDOWN_HEADING,
   COUNTDOWN_LIVE,
+  COUNTDOWN_UNITS,
   COUNTDOWN_WAITING,
+  FOOTER_TAG,
   HERO_BODY,
-  HERO_EYEBROW,
   HERO_HEADING,
-  INVITE_NOTE,
+  JOIN_HEADING,
+  JOIN_STEPS,
   LAUNCH_DATE_MS,
-  LAUNCHER_GUIDES,
   NAME_REQUEST_LABEL,
   NAME_REQUEST_PLACEHOLDER,
   NAME_REQUEST_VALIDATION,
   RESOURCE_LINKS,
   SERVER_ADDRESS,
-  TROUBLESHOOTING,
   TURNSTILE_LABEL,
   TURNSTILE_REQUIRED,
   TURNSTILE_UNAVAILABLE,
@@ -32,7 +30,6 @@ import {
   USERNAME_REQUEST_SUBMITTING,
   USERNAME_REQUEST_SUCCESS,
   USERNAME_REQUEST_VALIDATION,
-  VERSION_LINE
 } from './content'
 import { loadTurnstile, type TurnstileClient, type TurnstileWidgetId } from './turnstile'
 
@@ -330,13 +327,23 @@ export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
     return () => window.clearInterval(timer)
   }, [now])
 
+  const units = [
+    { label: COUNTDOWN_UNITS[0], value: snapshot.days },
+    { label: COUNTDOWN_UNITS[1], value: snapshot.hours },
+    { label: COUNTDOWN_UNITS[2], value: snapshot.minutes },
+    { label: COUNTDOWN_UNITS[3], value: snapshot.seconds }
+  ]
+
   return (
     <section className="ruled-band countdown-band" id="launch" aria-labelledby="countdown-heading">
       <div className="page-frame countdown-band__inner">
-        <div className="section-intro">
-          <p className="eyebrow">{COUNTDOWN_EYEBROW}</p>
-          <h2 id="countdown-heading">{COUNTDOWN_HEADING}</h2>
-          <p>{COUNTDOWN_BODY}</p>
+        <div className="countdown-meta" id="features">
+          <span className="countdown-meta__icon" aria-hidden="true" />
+          <div>
+            <p className="eyebrow">{COUNTDOWN_EYEBROW}</p>
+            <h2 id="countdown-heading">{COUNTDOWN_HEADING}</h2>
+            <p className="countdown-meta__body">{COUNTDOWN_BODY}</p>
+          </div>
         </div>
         <div
           className={snapshot.isLive ? 'launch-countdown launch-countdown--live' : 'launch-countdown'}
@@ -351,10 +358,12 @@ export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
             <>
               <p className="launch-countdown__label">{COUNTDOWN_WAITING}</p>
               <dl className="launch-countdown__units">
-                <div><dt>Days</dt><dd>{String(snapshot.days).padStart(2, '0')}</dd></div>
-                <div><dt>Hours</dt><dd>{String(snapshot.hours).padStart(2, '0')}</dd></div>
-                <div><dt>Minutes</dt><dd>{String(snapshot.minutes).padStart(2, '0')}</dd></div>
-                <div><dt>Seconds</dt><dd>{String(snapshot.seconds).padStart(2, '0')}</dd></div>
+                {units.map((unit) => (
+                  <div key={unit.label}>
+                    <dt>{unit.label}</dt>
+                    <dd>{String(unit.value).padStart(2, '0')}</dd>
+                  </div>
+                ))}
               </dl>
             </>
           )}
@@ -380,7 +389,7 @@ function ExternalLink({ href, children, className }: ExternalLinkProps) {
 
 function FieldGuideArt() {
   return (
-    <figure className="field-art" role="img" aria-labelledby="field-art-caption">
+    <figure className="field-art" id="gallery" role="img" aria-labelledby="field-art-caption">
       <div className="field-art__scene" aria-hidden="true">
         <span className="field-art__sun" />
         <span className="field-art__ridge field-art__ridge--back" />
@@ -445,15 +454,21 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
       <header className="site-header" role="banner">
         <div className="page-frame site-header__inner">
           <a className="wordmark" href="#welcome" aria-label="Cozy Friends home">
-            <span className="wordmark__mark" aria-hidden="true">CF</span>
-            <span>Cozy Friends</span>
+            <span className="wordmark__mark" aria-hidden="true">
+              <span className="wordmark__leaf wordmark__leaf--left" />
+              <span className="wordmark__leaf wordmark__leaf--right" />
+            </span>
+            <span className="wordmark__details">
+              <span className="wordmark__name">cozy friends</span>
+              <span className="wordmark__subtitle">A MINECRAFT SERVER</span>
+            </span>
           </a>
-          <nav className="site-nav" aria-label="Field guide navigation">
-            <a href="#launch">Launch</a>
-            <a href="#install">Install</a>
-            <a href="#connect">Connect</a>
-            <a href="#troubleshooting">Help</a>
-            <a href="#request">Join</a>
+          <nav className="site-nav" aria-label="Main navigation">
+            <a className="site-nav__link site-nav__link--active" href="#welcome" aria-current="page">HOME</a>
+            <a className="site-nav__link" href="#about">ABOUT</a>
+            <a className="site-nav__link" href="#features">FEATURES</a>
+            <a className="site-nav__link" href="#gallery">GALLERY</a>
+            <a className="site-nav__link" href="#join">JOIN</a>
           </nav>
         </div>
       </header>
@@ -462,28 +477,20 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
         <section className="hero-band" id="welcome" aria-labelledby="hero-heading">
           <div className="page-frame hero-grid">
             <div className="hero-copy">
-              <p className="eyebrow">{HERO_EYEBROW}</p>
               <h1 id="hero-heading">{HERO_HEADING}</h1>
-              <p className="hero-body">{HERO_BODY}</p>
-              <p className="version-line">{VERSION_LINE}</p>
-
-              <div className="address-block" aria-label="Minecraft server address">
-                <p className="address-label">Server address</p>
-                <div className="address-row">
-                  <code className="server-address" tabIndex={0} title="Select to copy manually">{SERVER_ADDRESS}</code>
-                  <button
-                    className={copyState === 'failed' ? 'copy-button copy-button--error' : 'copy-button'}
-                    type="button"
-                    aria-live="polite"
-                    aria-atomic="true"
-                    onClick={copyServerAddress}
-                  >
-                    {copyLabel}
-                  </button>
-                </div>
-
+              <div className="hero-copy__about" id="about">
+                <p className="hero-body">{HERO_BODY}</p>
               </div>
-              <p className="invite-note">{INVITE_NOTE}</p>
+              <div className="hero-actions">
+                <a className="hero-primary" href="#request">
+                  <span className="hero-action__icon" aria-hidden="true">+</span>
+                  JOIN COZY FRIENDS
+                </a>
+                <a className="hero-secondary" href="#about">
+                  LEARN MORE
+                  <span className="hero-action__arrow" aria-hidden="true">↓</span>
+                </a>
+              </div>
             </div>
             <FieldGuideArt />
           </div>
@@ -491,104 +498,96 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
 
         <LaunchCountdown now={countdownNow} />
 
-        <section className="ruled-band request-band" id="request" aria-labelledby="request-heading">
-          <div className="page-frame split-band">
-            <div className="section-intro">
+        <section className="join-band ruled-band" id="join" aria-labelledby="join-heading">
+          <div className="page-frame">
+            <div className="join-heading">
+              <span className="join-heading__mark" aria-hidden="true" />
+              <h2 id="join-heading">{JOIN_HEADING}</h2>
+            </div>
+            <ol className="join-steps">
+              {JOIN_STEPS.map((step) => (
+                <li className="join-step" key={step.number}>
+                  <span className="join-step__number" aria-hidden="true">{step.number}</span>
+                  <span className={`join-step__icon join-step__icon--${step.icon}`} aria-hidden="true" />
+                  <div className="join-step__copy">
+                    <h3>{step.label}</h3>
+                    <p>{step.copy}</p>
+                    {step.href && step.href.startsWith('#') ? (
+                      <a className="join-step__link" href={step.href}>{step.linkLabel}</a>
+                    ) : step.href ? (
+                      <ExternalLink className="join-step__link" href={step.href}>{step.linkLabel}</ExternalLink>
+                    ) : null}
+                    {step.number === '3' ? (
+                      <div className="server-address-card">
+                        <span className="server-address-card__label">SERVER ADDRESS</span>
+                        <div className="server-address-card__row">
+                          <code className="server-address-card__address" tabIndex={0} title="Select to copy manually">
+                            {SERVER_ADDRESS}
+                          </code>
+                          <button
+                            className={copyState === 'failed'
+                              ? 'server-address-card__button copy-button--error'
+                              : 'server-address-card__button'}
+                            type="button"
+                            aria-live="polite"
+                            aria-atomic="true"
+                            aria-label={copyLabel}
+                            onClick={copyServerAddress}
+                          >
+                            {copyLabel}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="request-band ruled-band" id="request" aria-labelledby="request-heading">
+          <div className="page-frame request-layout">
+            <div className="request-copy">
               <p className="eyebrow">{USERNAME_REQUEST_EYEBROW}</p>
               <h2 id="request-heading">{USERNAME_REQUEST_HEADING}</h2>
               <p>{USERNAME_REQUEST_BODY}</p>
+              <div className="official-links" aria-labelledby="official-links-heading">
+                <p className="official-links__label" id="official-links-heading">OFFICIAL HOMESTEAD LINKS</p>
+                <ul>
+                  {RESOURCE_LINKS.map((resource) => (
+                    <li key={resource.href}>
+                      <ExternalLink href={resource.href}>{resource.label}</ExternalLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
             <UsernameRequestForm turnstileClient={turnstileClient} turnstileSiteKey={configuredTurnstileSiteKey} />
-          </div>
-        </section>
-
-        <section className="ruled-band install-band" id="install" aria-labelledby="install-heading">
-          <div className="page-frame">
-            <div className="section-intro">
-              <p className="eyebrow">START HERE</p>
-              <h2 id="install-heading">Choose your launcher</h2>
-              <p>Use the same Homestead 1.3.7 profile whichever launcher feels most at home.</p>
-            </div>
-            <ol className="launcher-list">
-              {LAUNCHER_GUIDES.map((guide) => (
-                <li className="launcher-guide" key={guide.name}>
-                  <div className="launcher-guide__number" aria-hidden="true" />
-                  <h3>{guide.name}</h3>
-                  <p>
-                    <span className="launcher-guide__name">{guide.name}:</span>{' '}
-                    {guide.instructions}
-                  </p>
-                  <ExternalLink className="launcher-guide__link" href={guide.href}>{guide.linkLabel}</ExternalLink>
-                </li>
-              ))}
-            </ol>
-            <p className="guide-note">For the full client setup, read the CozyStudios installation guide before launching.</p>
-          </div>
-        </section>
-
-        <section className="ruled-band connect-band" id="connect" aria-labelledby="connect-heading">
-          <div className="page-frame split-band">
-            <div className="section-intro">
-              <p className="eyebrow">ONCE YOU ARE READY</p>
-              <h2 id="connect-heading">Meet us in the world</h2>
-            </div>
-            <ol className="connection-list">
-              {CONNECTION_STEPS.map((step, index) => (
-                <li key={step}>
-                  <span className="step-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                  <span>{index === 2 ? <>Set the name to <strong>Cozy Friends Server</strong> and address to <code>{SERVER_ADDRESS}</code>.</> : step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
-
-        <section className="community-band" aria-labelledby="community-heading">
-          <div className="page-frame community-band__inner">
-            <p className="eyebrow">A SHARED PLACE</p>
-            <h2 id="community-heading">Leave the world better than you found it.</h2>
-            <p className="community-line">{COMMUNITY_LINE}</p>
-          </div>
-        </section>
-
-        <section className="ruled-band troubleshooting-band" id="troubleshooting" aria-labelledby="troubleshooting-heading">
-          <div className="page-frame split-band split-band--troubleshooting">
-            <div className="section-intro">
-              <p className="eyebrow">FIELD NOTES</p>
-              <h2 id="troubleshooting-heading">If the path gets muddy</h2>
-              <p>Most first-day snags have a simple fix. Check these before rebuilding your profile.</p>
-            </div>
-            <ul className="troubleshooting-list">
-              {TROUBLESHOOTING.map((item) => (
-                <li key={item.label}>
-                  <strong>{item.label}:</strong> {item.guidance}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <section className="resources-band" aria-labelledby="resources-heading">
-          <div className="page-frame resources-band__inner">
-            <div>
-              <p className="eyebrow">OFFICIAL SOURCES</p>
-              <h2 id="resources-heading">Keep these close</h2>
-            </div>
-            <ul className="resource-list">
-              {RESOURCE_LINKS.map((resource) => (
-                <li key={resource.href}>
-                  <ExternalLink className="resource-link" href={resource.href}>{resource.label}</ExternalLink>
-                </li>
-              ))}
-            </ul>
           </div>
         </section>
       </main>
 
       <footer className="site-footer">
         <div className="page-frame site-footer__inner">
-          <p>Cozy Friends Server · Homestead 1.3.7</p>
-          <p>Bring a build, a story, or just a little time.</p>
+          <div className="footer-brand">
+            <span className="wordmark__mark" aria-hidden="true">
+              <span className="wordmark__leaf wordmark__leaf--left" />
+              <span className="wordmark__leaf wordmark__leaf--right" />
+            </span>
+            <span className="footer-brand__details">
+              <span className="footer-brand__name">cozy friends</span>
+              <span className="footer-brand__subtitle">A MINECRAFT SERVER</span>
+            </span>
+          </div>
+          <p className="footer-tag">
+            <span className="footer-tag__icon" aria-hidden="true">♥</span>
+            {FOOTER_TAG}
+          </p>
+          <p className="footer-address">
+            <span className="footer-address__marker" aria-hidden="true" />
+            <code>{SERVER_ADDRESS}</code>
+          </p>
         </div>
       </footer>
     </div>
