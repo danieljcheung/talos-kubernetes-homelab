@@ -6,6 +6,8 @@ metadata:
     app.kubernetes.io/name: cozy-friends-site
     app.kubernetes.io/component: web
     app.kubernetes.io/part-of: cozy-friends
+  annotations:
+    argocd.argoproj.io/sync-options: ServerSideApply=true
 data:
   index.html: |
     <!doctype html>
