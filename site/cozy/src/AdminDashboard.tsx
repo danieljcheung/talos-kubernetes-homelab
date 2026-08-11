@@ -4,6 +4,7 @@ const ADMIN_API_PATH = '/api/admin/submissions'
 
 type Submission = {
   id: number
+  name: string
   username: string
   status: 'pending' | 'approved' | 'rejected'
   submittedAt: string
@@ -119,6 +120,7 @@ export function AdminDashboard() {
                   <caption className="sr-only">Minecraft username requests</caption>
                   <thead>
                     <tr>
+                      <th scope="col">Name</th>
                       <th scope="col">Username</th>
                       <th scope="col">Submitted</th>
                       <th scope="col">Status</th>
@@ -128,7 +130,8 @@ export function AdminDashboard() {
                   <tbody>
                     {submissions.map((submission) => (
                       <tr key={submission.id}>
-                        <th scope="row"><code>{submission.username}</code></th>
+                        <th scope="row">{submission.name}</th>
+                        <td><code>{submission.username}</code></td>
                         <td>{new Date(submission.submittedAt).toLocaleString()}</td>
                         <td><span className={`admin-status admin-status--${submission.status}`}>{submission.status}</span></td>
                         <td className="admin-table__actions">

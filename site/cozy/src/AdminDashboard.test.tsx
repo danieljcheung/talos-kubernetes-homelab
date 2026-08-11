@@ -24,6 +24,7 @@ describe('Admin dashboard', () => {
   test('loads with a bearer token and approves a pending request', async () => {
     const pendingSubmission = {
       id: 42,
+      name: 'Birch Builder',
       username: 'BirchBuilder',
       status: 'pending' as const,
       submittedAt: '2026-08-11T10:00:00.000Z',
@@ -57,6 +58,7 @@ describe('Admin dashboard', () => {
       headers: { Authorization: 'Bearer field-notes-token' }
     })
     expect(screen.getByText('BirchBuilder')).toBeInTheDocument()
+    expect(screen.getByText('Birch Builder')).toBeInTheDocument()
     expect(screen.getByText('pending')).toBeInTheDocument()
 
     await act(async () => {
