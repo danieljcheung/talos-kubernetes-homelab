@@ -105,6 +105,5 @@ data:
 
     chmod -R u+rwX "${staging}"
     cp -R "${staging}/Homestead1.3.7/." "${data}/"
-    chmod -R u+rwX "${data}"
     rm -rf "${staging}"
     printf '%s\n' "${expected}" > "${marker}"

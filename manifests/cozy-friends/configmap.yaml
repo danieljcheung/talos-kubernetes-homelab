@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/name: homestead
     app.kubernetes.io/part-of: cozy-friends
 data:
-  # Keep FALSE until the owner has explicitly accepted the Minecraft EULA.
-  EULA: "FALSE"
+  # Owner accepted the Minecraft EULA; the server may start.
+  EULA: "TRUE"
   TYPE: FABRIC
   VERSION: "1.20.1"
   MEMORY: 8G
