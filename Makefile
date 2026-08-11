@@ -18,7 +18,7 @@ verify: ## Verify ConfigMap matches built assets (checks if stale)
 
 build-cozy: ## Build the Cozy Friends companion site
 	@echo "Building Cozy Friends site..."
-	@npm --prefix site run build:cozy
+	@VITE_COZY_ASSET_VERSION=$$(git rev-parse --short HEAD) npm --prefix site run build:cozy
 
 sync-cozy: ## Sync Cozy Friends assets to its ConfigMap
 	@echo "Syncing site/dist-cozy assets to manifests/cozy-friends-site/configmap.yaml..."
