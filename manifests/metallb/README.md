@@ -11,10 +11,11 @@ does not provide a firewall, DDoS protection, encryption, or a replacement for
 the router's WAN rule. The only intended consumer of this pool is the Cozy
 Friends Minecraft gameplay Service in the `cozy-friends` namespace.
 
-The committed pool contains the candidate address `10.0.0.32/32`. This is a
-documented candidate, **not a router-verified or otherwise approved VIP**. Do
-not sync or apply `manifests/metallb/config`, create a LoadBalancer Service, or
-add a router rule until the candidate-VIP gate below is complete.
+The committed pool contains `10.0.0.254/32`. The router reports DHCP
+`.2`–`.253`; `.254` was absent from the lease page, ARP, and ping. The
+MetalLB chart is installed and ready, but do not sync the pool, create the
+LoadBalancer Service, or add the WAN rule until the router edge and remaining
+Minecraft launch gates are complete.
 
 ## Files
 
@@ -29,23 +30,21 @@ add a router rule until the candidate-VIP gate below is complete.
 
 ## Preflight and candidate-VIP gate
 
-Before changing the cluster or edge, verify all of the following from the
-trusted operations workstation:
+Before syncing the pool or changing the edge, verify all of the following from
+the trusted operations workstation:
 
 1. The Kubernetes API is reachable and the Talos nodes are on the same Layer 2
    LAN. Confirm the node interface and subnet used for MetalLB.
-2. `10.0.0.32` is outside the router DHCP range and is not a reservation or an
-   active DHCP lease.
+2. `10.0.0.254` is outside the router DHCP range and is not a reservation or
+   an active DHCP lease.
 3. The address is unused: check the router lease table, ARP/neighbour state,
    ping, existing `LoadBalancer` Services, and existing MetalLB pools.
-4. Reserve the address in the router for the MetalLB use case. Record the
-   router/DHCP decision in the operations runbook.
-5. Confirm the router can forward WAN TCP `25565` to this LAN address and that
+4. Confirm the router can forward WAN TCP `25565` to this LAN address and that
    the WAN address is a routable public IPv4 (not private space or CGNAT).
 
-Until these checks are complete, leave the pool and Layer 2 advertisement
-unapplied. The address in Git must continue to be described as a candidate;
-LAN reachability alone is not proof that the public edge is configured.
+The current preflight proves items 1–3. The router web UI delegates port
+forwarding to the Rogers Xfinity app, so item 4 remains pending. LAN
+reachability alone is not proof that the public edge is configured.
 
 ## Install order
 
@@ -129,7 +128,7 @@ metadata:
     app.kubernetes.io/name: homestead
   annotations:
     metallb.io/address-pool: minecraft-public
-    metallb.io/loadBalancerIPs: 10.0.0.32
+    metallb.io/loadBalancerIPs: 10.0.0.254
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
@@ -143,23 +142,25 @@ spec:
 YAML
 
 kubectl -n cozy-friends get service metallb-validation -o wide
-nc -vz 10.0.0.32 80
+nc -vz 10.0.0.254 80
 kubectl -n cozy-friends delete service/pod metallb-validation
 ```
 
-The Service should receive `10.0.0.32` and be reachable from a LAN client. If
-allocation or ARP fails, remove the temporary resources and stop; do not add a
-WAN rule or deploy Minecraft until the address and Layer 2 path are corrected.
-The temporary Service must be deleted after validation so the pool remains
-reserved for the production gameplay Service.
+The Service should receive `10.0.0.254` and be reachable from a LAN client.
+If allocation or ARP fails, remove the temporary resources and stop; do not
+add a WAN rule or deploy Minecraft until the address and Layer 2 path are
+corrected. The temporary Service must be deleted after validation so the pool
+remains reserved for the production gameplay Service.
 
 ## Monitoring
 
-The chart values enable the controller and speaker ServiceMonitors and the
-built-in stale-config, config-not-loaded, address-pool-exhausted, and address
-pool-usage PrometheusRules. The BGP session alert is disabled because neither
-FRR nor the frr-k8s backend is installed. Confirm the generated resources and
-Prometheus target from the `monitoring` namespace after installation:
+The chart values enable the controller and speaker ServiceMonitors plus
+stale-config and config-not-loaded alerts. The intentionally singleton
+`minecraft-public` pool is excluded from capacity alerts so a healthy
+allocation does not report 100% usage as an incident. The BGP session alert is
+disabled because neither FRR nor the frr-k8s backend is installed. Confirm
+the generated resources and Prometheus target from the `monitoring` namespace
+after installation:
 
 ```bash
 kubectl -n metallb-system get servicemonitor,prometheusrule

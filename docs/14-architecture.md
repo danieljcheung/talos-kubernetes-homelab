@@ -147,7 +147,7 @@ routes under `popinvites.com`:
 Minecraft Java
   -> mc.popinvites.com explicit DNS-only A record
   -> home WAN IPv4 -> router TCP 25565
-  -> MetalLB Layer 2 VIP 10.0.0.32/32 (candidate)
+  -> MetalLB Layer 2 VIP 10.0.0.254/32 (LAN-verified; WAN rule pending)
   -> cozy-friends/homestead gameplay Service
 
 Web browser
@@ -159,11 +159,12 @@ Web browser
 
 The `mc` record must be gray-cloud/DNS-only; `cozy` remains covered by the
 existing proxied wildcard. No second Tunnel, RCON Service, UDP forwarding, or
-Cloudflare Access policy is part of this design. The candidate VIP is not
-router-verified, so this is a planned route rather than deployment evidence.
-Public launch remains gated by the verified LAN/DHCP/WAN path, explicit EULA
-acceptance, allowlist usernames, local secrets, client smoke test, backup
-restore, and outside-network monitors.
+Cloudflare Access policy is part of this design. The router reports DHCP
+`.2`–`.253`; `.254` was absent from the lease page, ARP, and ping. Its WAN
+IPv4 `99.227.195.189` matches an independent public probe, but the router's
+web UI delegates port-forward setup to the Rogers Xfinity app. Public launch
+remains gated by the TCP 25565 rule, EULA, allowlist, local secrets, client
+smoke test, backup restore, and outside-network monitors.
 
 The Minecraft world uses one StatefulSet replica and Longhorn replica count 1.
 That combination is persistent storage, not high availability: a node or disk

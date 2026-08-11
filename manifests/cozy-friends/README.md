@@ -93,13 +93,13 @@ values through this repository workflow.
 
 ## Candidate VIP and public edge gate
 
-`service-gameplay.yaml` contains the documented candidate
-`10.0.0.32/32` in the MetalLB annotations. **This address is unverified and the
-Service must not be applied as a public edge until the gate is complete.**
-Before syncing it, confirm that the address is outside the router DHCP pool,
-absent from leases/ARP/ping/existing Services/MetalLB resources, reserved in the
-router, and on the same Layer 2 LAN as the eligible Talos nodes. Confirm the
-cluster has a working MetalLB install and the Service has a ready local endpoint.
+`service-gameplay.yaml` uses the LAN-verified candidate
+`10.0.0.254/32` in the MetalLB annotations. The router DHCP pool is
+`.2`–`.253`; `.254` was absent from the router lease page, ARP, and ping.
+The MetalLB chart is installed and ready, but the pool and Service remain
+unsynced until the WAN edge and remaining launch gates are complete. Confirm
+the cluster has a working MetalLB install and the Service has a ready local
+endpoint before opening the router.
 
 The only intended router rule is:
 

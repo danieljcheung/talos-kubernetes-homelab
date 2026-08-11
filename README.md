@@ -103,11 +103,13 @@ flowchart TB
 See [Architecture](docs/14-architecture.md) for the larger system context and cluster container view.
 ## Planned Cozy Friends routes (gated)
 
-The repository contains a runbook and manifests for a planned Homestead 1.3.7
-server, but this is not a deployment claim. Public launch remains blocked until
-the Kubernetes, router, WAN, Cloudflare, EULA, secret, client, backup-restore,
-and outside-network monitor gates are proven. The candidate MetalLB VIP
-`10.0.0.32/32` is not router-verified.
+The repository contains a runbook and manifests for a Homestead 1.3.7
+server, but this is not a public-launch claim. The companion guide is live;
+Minecraft launch remains blocked until the Kubernetes workload, router TCP
+rule, Cloudflare DDNS secret, EULA/allowlist, backup-restore, client, and
+outside-network monitor gates are proven. The LAN-verified MetalLB candidate
+VIP is `10.0.0.254/32`: the router DHCP pool is `10.0.0.2`–`10.0.0.253`,
+and `.254` was absent from the lease page, ARP, and ping at preflight.
 
 ```text
 Minecraft Java -> DNS-only mc.popinvites.com -> home WAN IPv4

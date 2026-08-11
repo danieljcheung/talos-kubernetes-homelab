@@ -119,14 +119,17 @@ different and must use an explicit gray-cloud/DNS-only record:
 ```text
 Java client -> mc.popinvites.com DNS-only A record
             -> home WAN IPv4 -> router TCP 25565
-            -> MetalLB candidate VIP 10.0.0.32/32
+            -> MetalLB LAN-verified VIP 10.0.0.254/32
 ```
 
-`10.0.0.32/32` is not router-verified, and public launch remains gated by the
-LAN VIP, DHCP, WAN/CGNAT, EULA, allowlist, secret, client, backup-restore, and
-outside-network monitor checks. The plan uses Longhorn replica count 1, which
-provides persistent storage rather than high availability; application-aware
-Restic backups are the primary recovery path. See the
+The router reports DHCP `.2`–`.253`; `.254` was absent from the lease page,
+ARP, and ping during preflight. The WAN address `99.227.195.189` matches an
+independent public probe. The router's web UI delegates port-forward setup to
+the Rogers Xfinity app, so the TCP 25565 edge rule remains pending.
+Public launch is still gated by the EULA, allowlist, local secrets, client,
+backup-restore, and outside-network monitor checks. The plan uses Longhorn
+replica count 1, which provides persistent storage rather than high
+availability; application-aware Restic backups are the primary recovery path.
 [Cozy Friends Server runbook](19-cozy-friends-server.md) for the edge rule,
 SOPS boundary, and rollback order.
 

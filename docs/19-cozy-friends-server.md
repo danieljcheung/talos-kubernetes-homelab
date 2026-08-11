@@ -1,8 +1,15 @@
 # Cozy Friends Server — Homestead 1.3.7
 
-This runbook is the operating record for the planned Cozy Friends Minecraft Java server and its public companion guide. It describes the repository-local implementation and the gates that must be completed by an operator. It is **not** evidence that the cluster, router, Cloudflare account, WAN path, or public client path has been deployed or tested.
+This runbook is the operating record for the Cozy Friends Minecraft Java
+server and its public companion guide. It describes the repository-local
+implementation, verified live evidence, and remaining operator gates; it is
+not a public-launch claim.
 
-The candidate MetalLB address is `10.0.0.32/32`. It is not router-verified, and public launch remains gated until the LAN, DHCP, WAN, Cloudflare, secret, client, backup-restore, and outside-network checks below are complete.
+Current checkpoint: the MetalLB chart is installed, the separate Cozy guide
+is Argo-synced and reachable at `https://cozy.popinvites.com`, and the
+LAN-verified MetalLB candidate is `10.0.0.254/32`. The Minecraft workload,
+DDNS updater, router TCP rule, backup credentials, client path, and external
+monitor remain intentionally gated.
 
 Primary source links:
 
@@ -21,7 +28,7 @@ Minecraft Java client
   -> DNS-only mc.popinvites.com
   -> current home WAN IPv4
   -> router TCP 25565
-  -> MetalLB VIP <verified-vip>/32
+  -> MetalLB VIP 10.0.0.254/32
   -> cozy-friends/homestead gameplay Service
   -> homestead-0 StatefulSet pod
 
@@ -39,22 +46,44 @@ Web browser
 
 MetalLB is only a LAN address-advertisement and Kubernetes failover mechanism. It is not a firewall, DDoS service, encryption boundary, or substitute for the router rule. `externalTrafficPolicy: Local` is required on the gameplay Service so logs can retain the real client source address.
 
-## 2. Hard gates and current status
+## 2. Launch gates and current status
 
-Do not mutate the cluster or edge until the following are proven:
+Verified at the current checkpoint:
 
-1. Kubernetes API access is restored and the Talos nodes, LAN interface, subnet, CNI policy behavior, kube-proxy mode, Longhorn prerequisites, Prometheus selectors, and existing Tunnel route are inspected.
-2. `10.0.0.32` is confirmed unused, outside the router DHCP range, not an existing reservation or lease, absent from ARP/ping, and reserved for this purpose in the router. The candidate address in Git is not proof of any of these checks.
-3. The router WAN IPv4 is publicly routable and is not private space or CGNAT. Confirm it with an independent public IPv4 probe.
-4. The owner explicitly accepts the Minecraft EULA. Set `EULA=TRUE` only after that acceptance.
-5. The exact case-sensitive Java usernames for the owner and friends are supplied and allowlisted before the WAN rule is enabled.
-6. The official server pack is downloaded, inspected, locally tested with the matching client, and checksum-verified. The ZIP is kept out of Git and OCI registries.
-7. RCON, Restic, and least-privilege S3 values are entered directly into the local SOPS workflow. They must never appear in chat, shell history, logs, generated documentation, or committed plaintext.
-8. A known world marker survives an application-aware Restic backup, throwaway restore, and disconnected throwaway server start. Keep a pre-launch backup until a real play session and a second restore check have completed.
-9. `mc.popinvites.com` works from the LAN through the verified VIP, and `cozy.popinvites.com` works in a signed-out browser through the existing Tunnel.
-10. An external UptimeRobot TCP check for `mc.popinvites.com:25565` and HTTPS check for `https://cozy.popinvites.com` (expecting HTTP 200) are active and verified. UptimeRobot login, email verification, and alert testing remain user credential boundaries.
+1. Kubernetes context `admin@noderoy-1` is reachable; all three Talos
+   nodes are `Ready`, Longhorn is provisioned, and the existing monitoring,
+   ingress-nginx, kube-proxy, and Cloudflare Tunnel paths were inspected.
+2. MetalLB chart `0.16.1` is installed; its controller and all three speakers
+   are `Ready`. The address pool and gameplay Service remain unsynced.
+3. The router LAN is `10.0.0.0/24` with DHCP `.2`–`.253`. Candidate
+   `10.0.0.254` was absent from the router lease page, ARP, and ping.
+4. Router WAN IPv4 `99.227.195.189` matches the independent public IPv4 probe.
+5. Cloudflare shows `mc.popinvites.com` as DNS-only at that address, the
+   `*.popinvites.com` wildcard on the healthy two-replica Tunnel, and the
+   public Cozy guide returns HTTP 200.
+6. The official ZIP has observed size `537016567` bytes and the recorded
+   SHA-256; a non-root local Homestead startup reached the helper image's
+   `Done` readiness log. The ZIP remains outside Git and OCI registries.
+7. The separate Cozy site Application is Argo-synced and Healthy.
 
-The last recorded read-only preflight could not reach `10.0.0.97:6443` (`no route to host`). Re-run the preflight after connectivity is restored; do not infer live readiness from repository files.
+Remaining launch gates:
+
+1. Add only WAN TCP `25565` -> `10.0.0.254:25565` through the Rogers Xfinity
+   app. Do not forward UDP, RCON, NodePorts, or admin ports.
+2. Enter the Cloudflare DNS API token, Minecraft RCON password, Restic
+   password/repository, and least-privilege S3/R2 values through local SOPS.
+3. Supply explicit EULA acceptance and exact case-sensitive Java usernames,
+   then create the allowlist before exposing the WAN rule.
+4. Stage the verified ZIP onto the private pack PVC, sync MetalLB and
+   Minecraft only after the secret is applied, and wait for a ready endpoint.
+5. Prove a known world marker through an application-aware backup, throwaway
+   restore, and disconnected throwaway server start.
+6. Verify a LAN client through `mc.popinvites.com`, then activate and test
+   UptimeRobot TCP and HTTPS monitors from outside the home network.
+
+The router's web UI delegates port-forward configuration to the Rogers Xfinity
+app, so the edge rule is still intentionally absent. Do not infer Minecraft
+readiness from the repository or the public guide alone.
 
 ## 3. Official artifact record
 
@@ -172,7 +201,11 @@ The final two commands verify only Secret metadata. Never place a token, passwor
 
 ## 7. MetalLB install and upgrade
 
-MetalLB is Layer 2 only, chart `0.16.1`, with one `autoAssign: false` `/32` pool selected only by the Cozy Friends gameplay Service. Read [`manifests/metallb/README.md`](../manifests/metallb/README.md) before changing it. Complete the candidate-VIP and kube-proxy/CNI checks first.
+MetalLB is Layer 2 only, chart `0.16.1`, with one `autoAssign: false` `/32`
+pool at the LAN-verified candidate `10.0.0.254`, selected only by the Cozy
+Friends gameplay Service. Read [`manifests/metallb/README.md`](../manifests/metallb/README.md)
+before changing it. The chart is installed and ready; sync the pool only
+after the WAN rule and remaining launch gates are complete.
 
 Install the namespace and Helm release manually:
 
@@ -353,4 +386,4 @@ kubectl get ns metallb-system
 helm list -A
 ```
 
-Record the DHCP reservation, verified WAN IPv4, CNI/kube-proxy findings, Prometheus selector/service-account findings, artifact byte count/digest, restore evidence, external monitor state, and router/DNS changes in the operator's change record. This repository update intentionally records the gates and planned Prometheus rules; it does not claim that any gate or deployment has completed.
+Record the DHCP pool and candidate-VIP evidence, verified WAN IPv4, CNI/kube-proxy findings, Prometheus selector/service-account findings, artifact byte count/digest, Argo/site status, restore evidence, external monitor state, and router/DNS changes in the operator's change record. This revision records the installed MetalLB chart and live companion guide; it does not claim that Minecraft public launch is complete.
