@@ -17,7 +17,7 @@ verify: ## Verify ConfigMap matches built assets (checks if stale)
 	@node scripts/generate-configmap.mjs --check
 
 build-cozy: ## Build the Cozy Friends companion site
-	@echo "Building Cozy Friends site..."
+	@test -n "$${VITE_TURNSTILE_SITE_KEY:-}" || (echo "VITE_TURNSTILE_SITE_KEY must be set before building Cozy Friends." >&2; exit 1)
 	@VITE_COZY_ASSET_VERSION=$$(git rev-parse --short HEAD) npm --prefix site run build:cozy
 
 sync-cozy: ## Sync Cozy Friends assets to its ConfigMap
