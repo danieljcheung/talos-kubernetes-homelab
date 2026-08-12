@@ -9,11 +9,14 @@ Current checkpoint: the MetalLB chart is installed, the Cozy guide and
 token-authenticated approval API are Argo-synced and reachable at
 `https://cozy.popinvites.com`, and the LAN-verified MetalLB VIP is
 `10.0.0.254/32`. The Homestead pod is ready with the whitelist-sync sidecar.
-The owner has accepted the EULA; the MetalLB pool, encrypted Secret contracts,
-and DNS-only `mc` record are infrastructure/configuration evidence, not
-proof of public play. This runbook makes no claim that a public Minecraft
-client join, router TCP forwarding, backup restore, or external monitor has
-been proven.
+The owner has accepted the EULA. The S3-compatible Longhorn backup target is
+healthy, the application-aware Restic snapshot and textfile success metric
+are proven, and a disconnected throwaway Homestead pod loaded the restored
+world and returned its known marker over localhost-only RCON. The MetalLB
+pool, encrypted Secret contracts, and DNS-only `mc` record are
+infrastructure/configuration evidence, not proof of public play. This runbook
+makes no claim that a public Minecraft client join, router TCP forwarding, or
+external monitor has been proven.
 
 ## Public guide promise and launch target
 
@@ -95,6 +98,13 @@ Verified at the current checkpoint:
    SHA-256; a non-root local Homestead startup reached the helper image's
    `Done` readiness log. The ZIP remains outside Git and OCI registries.
 7. The separate Cozy site Application is Argo-synced and Healthy.
+8. The Longhorn S3-compatible `BackupTarget/default` is available; the
+   production daily snapshot and weekly external-backup jobs are attached to
+   the world volume's `default` recurring-job group. An application-aware
+   Restic run produced snapshot `8f2c792a`, reported exit code `0`, and wrote
+   the success timestamp metric. A throwaway PVC restore, official pack
+   staging, disconnected server start, and localhost-only RCON marker check
+   all succeeded.
 
 Remaining owner/operator launch gates (these are evidence and credential
 boundaries, not claims that the EULA, MetalLB pool, or encrypted Secret
@@ -106,18 +116,14 @@ contracts are absent):
    username through the Turnstile-protected public form, then use the
    token-gated admin dashboard to approve the owner account. Confirm the
    resulting allowlist entry before exposing WAN access.
-3. The operator must observe a successful application-aware Restic backup and
-   prove the marker/throwaway restore sequence in Section 9. Use the existing
-   encrypted RCON/Restic/S3 values through SOPS; never print them or treat
-   their presence as backup proof. Keep the Longhorn backup target healthy.
-4. After the LAN test, the owner must join from a genuinely outside network
+3. After the LAN test, the owner must join from a genuinely outside network
    with the CurseForge Homestead `1.3.7` profile, Minecraft `1.20.1`, Fabric,
    Java `17`, and `8 GiB` client RAM. An on-LAN result can be hidden by NAT
    loopback and is not public Internet proof.
-5. The owner must create and activate five-minute UptimeRobot TCP and HTTPS
+4. The owner must create and activate five-minute UptimeRobot TCP and HTTPS
    monitors, complete account/email verification, and observe a successful
    outside-network check. No external monitor is claimed proven here.
-6. Friends may submit their own name and exact Java username after the form
+5. Friends may submit their own name and exact Java username after the form
    is live; each request still requires Turnstile, owner review, and approval.
 
 The router's web UI delegates port-forward configuration to the Rogers Xfinity
@@ -373,18 +379,30 @@ minecraft_backup_last_exit_code <exit-code>
 
 A restart clears this `emptyDir` by design; the success metric must be absent until a backup is proven. Do not treat logs alone as backup-freshness proof.
 
-Before public launch:
+Verified recovery test at the current checkpoint:
 
-1. Create a unique marker in the running world.
-2. Observe one successful Restic backup and prune operation.
-3. Restore it into a throwaway PVC.
-4. Start a disconnected throwaway Homestead pod against the restored data.
-5. Confirm the marker and world load.
-6. Remove disposable resources only after confirmation.
-7. Keep the pre-launch backup through the first real play session and perform another restore check.
-8. Confirm the Longhorn daily snapshot/weekly external-backup attachment separately.
+1. Created scoreboard marker `restore_test=20260810` in the running world.
+2. Ran `/usr/bin/backup now`; the application-aware `save-off`,
+   `save-all`, Restic backup, and `save-on` sequence completed successfully.
+   Restic snapshot `8f2c792a` was recorded, the exit metric is `0`, and the
+   success timestamp metric is present.
+3. Restored that snapshot into a throwaway 100-GiB PVC.
+4. Staged the verified official pack in an isolated pack PVC and started a
+   disconnected throwaway Homestead pod from the restored data.
+5. Confirmed the server reached its `Done` signal and returned
+   `restore_test=20260810` through localhost-only RCON.
+6. Removed the disposable restore pod, Job, PVCs, and isolated pack PVC.
 
-If the primary backup alert fires, stop destructive maintenance, inspect the backup sidecar and RCON/save sequence, verify Restic repository reachability and S3 authorization without printing credentials, and do not claim a recoverable backup until a restore succeeds.
+The pre-launch backup must remain until the first real play session; perform
+another restore check afterward. The production Longhorn daily snapshot and
+weekly external-backup jobs are attached to the world PVC's `default` group.
+A restart clears the metrics `emptyDir`, so a success timestamp must be
+proven again before treating backup freshness as current.
+
+If the primary backup alert fires, stop destructive maintenance, inspect the
+backup sidecar and RCON/save sequence, verify Restic repository reachability
+and S3-compatible authorization without printing credentials, and do not claim
+a recoverable backup until a restore succeeds.
 
 ## 10. Monitoring and logs
 

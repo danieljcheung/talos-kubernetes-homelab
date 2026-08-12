@@ -11,7 +11,7 @@ flowchart TB
   cloudflare["Cloudflare<br/>DNS + Tunnel"]
   tailscale["Tailscale<br/>Private Mesh"]
   telegram["Telegram<br/>Alert Delivery"]
-  s3["AWS S3<br/>Longhorn Backups"]
+  s3["Cloudflare R2<br/>Longhorn Backups"]
 
   homelab["Talos Kubernetes Homelab<br/>2 bare-metal SFF nodes<br/>1 control plane · 1 worker"]
 
@@ -40,7 +40,7 @@ flowchart TB
   cloudflare["Cloudflare Edge"]
   tailscale["Tailscale Mesh"]
   telegram["Telegram"]
-  s3["AWS S3<br/>Longhorn Backups"]
+  s3["Cloudflare R2<br/>Longhorn Backups"]
 
   subgraph cluster["Talos Kubernetes Homelab"]
     direction TB
@@ -136,12 +136,16 @@ flowchart TB
 - Public preview environments are exposed dynamically under subdomains of `popinvites.com` using Cloudflare wildcard routing to the internal `ingress-nginx` controller.
 - Admin dashboards stay private through Tailscale ingress.
 - Secrets are encrypted in Git with SOPS and applied from the trusted admin machine for now.
-- Longhorn provides persistent volumes and external AWS S3 backups, but the current two-node setup is still not a fully highly available storage/control-plane design.
-- The cluster currently uses one control-plane node and one worker node. This is cleaner than two control-plane nodes because etcd HA should use three control-plane members.
-## Planned Cozy Friends public paths (gated)
+- Longhorn provides persistent volumes and external S3-compatible Cloudflare
+  R2 backups, but the current two-node setup is still not a fully highly
+  available storage/control-plane design.
+- The cluster currently uses one control-plane node and one worker node. This
+  is cleaner than two control-plane nodes because etcd HA should use three
+  control-plane members.
+## Cozy Friends public paths (gated)
 
-The planned Homestead 1.3.7 hosting design adds two intentionally different
-routes under `popinvites.com`:
+The Homestead 1.3.7 hosting design adds two intentionally different routes
+under `popinvites.com`:
 
 ```text
 Minecraft Java
@@ -158,13 +162,14 @@ Web browser
 ```
 
 The `mc` record must be gray-cloud/DNS-only; `cozy` remains covered by the
-existing proxied wildcard. No second Tunnel, RCON Service, UDP forwarding, or
-Cloudflare Access policy is part of this design. The router reports DHCP
+existing proxied wildcard. No second Tunnel, RCON Service, or UDP forwarding
+for the initial TCP launch is part of this design. The router reports DHCP
 `.2`–`.253`; `.254` was absent from the lease page, ARP, and ping. Its WAN
 IPv4 `99.227.195.189` matches an independent public probe, but the router's
 web UI delegates port-forward setup to the Rogers Xfinity app. Public launch
-remains gated by the TCP 25565 rule, EULA, allowlist, local secrets, client
-smoke test, backup restore, and outside-network monitors.
+remains gated by the TCP 25565 rule, EULA, allowlist, client smoke test, and
+outside-network monitors. Public voice chat is optional and requires a separate
+approved UDP 24454 rule and external test.
 
 The Minecraft world uses one StatefulSet replica and Longhorn replica count 1.
 That combination is persistent storage, not high availability: a node or disk

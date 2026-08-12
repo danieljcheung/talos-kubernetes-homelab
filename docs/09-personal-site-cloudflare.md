@@ -100,11 +100,11 @@ www.danieljcheung.com  -> http://nginx.default.svc.cluster.local:80
 ```
 
 Both the root hostname and `www` hostname should route to this same service target. If one hostname fails while the internal service works, suspect Cloudflare DNS/tunnel/edge propagation before changing nginx.
-## Cozy Friends routes on `popinvites.com` (planned and gated)
+## Cozy Friends routes on `popinvites.com` (live guide, launch gated)
 
-The planned Cozy Friends companion guide is a separate workload from this
-personal site. The existing proxied `*.popinvites.com` wildcard and Tunnel
-should continue to route the browser path:
+The Cozy Friends companion guide is a separate workload from this personal
+site. The existing proxied `*.popinvites.com` wildcard and Tunnel route the
+browser path:
 
 ```text
 browser -> Cloudflare proxied wildcard -> existing Tunnel
@@ -126,10 +126,11 @@ The router reports DHCP `.2`–`.253`; `.254` was absent from the lease page,
 ARP, and ping during preflight. The WAN address `99.227.195.189` matches an
 independent public probe. The router's web UI delegates port-forward setup to
 the Rogers Xfinity app, so the TCP 25565 edge rule remains pending.
-Public launch is still gated by the EULA, allowlist, local secrets, client,
-backup-restore, and outside-network monitor checks. The plan uses Longhorn
-replica count 1, which provides persistent storage rather than high
-availability; application-aware Restic backups are the primary recovery path.
+Public launch is still gated by the EULA, allowlist, TCP 25565 edge rule,
+outside-network client, and monitor checks. The application-aware Restic
+backup and throwaway restore are now proven; Longhorn replica count 1 provides
+persistent storage rather than high availability, and Longhorn snapshots/R2
+backups remain secondary disaster recovery.
 [Cozy Friends Server runbook](19-cozy-friends-server.md) for the edge rule,
 SOPS boundary, and rollback order.
 

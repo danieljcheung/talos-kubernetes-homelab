@@ -23,7 +23,7 @@ The goal of this project is to learn Kubernetes and platform engineering by runn
 ✅ Observability stack installed: Prometheus, Grafana, Alertmanager, Loki, and Alloy
 ✅ SOPS workflow added for encrypted Git-tracked secrets
 ✅ Longhorn installed for Kubernetes-native persistent storage
-✅ Longhorn external backups configured to AWS S3 and restore-tested
+✅ Longhorn external backups configured to S3-compatible Cloudflare R2 and restore-tested
 ✅ CloudNativePG Postgres created for the Company Brain app
 ✅ PreviewApp operator GitOps setup configured
 🔄 Third node / control-plane expansion in progress
@@ -128,21 +128,23 @@ Browser -> proxied *.popinvites.com -> existing Cloudflare Tunnel
 Infrastructure evidence currently recorded includes the Argo-synced guide/API
 returning HTTP 200, the installed MetalLB chart and production
 `minecraft-public` pool at the LAN-verified `10.0.0.254/32`, the ready
-Homestead pod, the DNS-only `mc` record, and the owner's accepted EULA. The
-VIP is outside the router DHCP range (`.2`–`.253`) and has a ready local
-endpoint. These facts do not prove a public Minecraft client, WAN forwarding,
-backup restore, or outside-network monitor.
+Homestead pod, the DNS-only `mc` record, the owner's accepted EULA, and a
+successful application-aware Restic snapshot plus throwaway restore. The
+restored Homestead server loaded the official pack and returned the known
+world marker over localhost-only RCON. The VIP is outside the router DHCP
+range (`.2`–`.253`) and has a ready local endpoint. These facts do not prove a
+public Minecraft client, WAN forwarding, or outside-network monitor.
 
 Remaining owner/operator launch gates are explicit:
 
 1. The owner adds only WAN TCP `25565` -> `10.0.0.254:25565` in the Rogers
    Xfinity app; no UDP, RCON, NodePort, or admin forwarding.
+   Optional voice chat uses UDP `24454` only after a separate explicit router
+   decision and external test; it is not part of the initial TCP launch.
 2. A person submits their name and exact, case-sensitive Java username through
    the Turnstile-protected form; the owner approves the owner row and confirms
    the local allowlist entry.
-3. The operator proves an application-aware backup and throwaway restore with
-   a known world marker.
-4. After the LAN test, the owner joins from outside the home network with the
+3. After the LAN test, the owner joins from outside the home network with the
    CurseForge profile and activates five-minute UptimeRobot TCP/HTTPS checks.
 
 The form sends `POST /api/usernames` JSON

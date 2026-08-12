@@ -2,9 +2,10 @@
 
 This directory deploys one **Homestead 1.3.7** Minecraft Java server in the
 `cozy-friends` namespace. It is intentionally gated: current evidence covers
-the MetalLB VIP/pool, ready local endpoint, owner EULA acceptance, and
-encrypted Secret contracts, but does not claim that a public Minecraft client,
-WAN router rule, backup restore, or external monitor has been proven.
+the MetalLB VIP/pool, ready local endpoint, owner EULA acceptance, encrypted
+Secret contracts, and a proven application-aware backup/throwaway restore,
+but does not claim that a public Minecraft client, WAN router rule, or
+external monitor has been proven.
 
 ## Public guide and launch promise
 
@@ -34,13 +35,14 @@ add a name through localhost-only RCON.
   `workload.minecraft=true`. Label the verified 32-GiB node after checking
   allocatable capacity; do not replace this with a hostname selector.
 - `data-homestead-0` is a 100-GiB Longhorn RWO world volume. Its recurring-job
-  labels attach the existing Longhorn daily snapshot/weekly backup group. The
-  volume has one Longhorn replica in this cluster, so this is not Minecraft HA.
+  labels attach the GitOps-managed daily snapshot/weekly backup group. The
+  volume has one Longhorn replica in this cluster, so this is not Minecraft
+  HA.
 - `homestead-pack` is a private 2-GiB Longhorn RWO PVC. The server mounts it at
   `/pack` read-only; the ZIP is not in Git, an image, or an OCI registry.
 - The gameplay Service is the only `LoadBalancer`. The headless and backup
-  metrics Services are internal. There is deliberately no RCON Service and no
-  UDP Service.
+  metrics Services are internal. The gameplay Service exposes optional voice
+  chat UDP 24454; there is deliberately no RCON Service.
 
 All containers use pinned image digests, run as non-root with RuntimeDefault
 seccomp, drop all capabilities, disallow privilege escalation, and do not
@@ -55,9 +57,10 @@ private workstation until the pack PVC is ready. Inspect `HOW-TO-RUN.md`,
 `variables.txt`, `server.properties`, `mods/`, and `config/` before staging it.
 Confirm the pack is Minecraft 1.20.1, Fabric, Java 17, and inspect its optional
 network features before opening firewall ports. The verified pack includes
-Simple Voice Chat (`voicechat-fabric-1.20.1-2.6.17.jar`), which uses UDP 24454;
-the Kubernetes Service and NetworkPolicy expose Minecraft TCP 25565 and voice
-chat UDP 24454; the home router still needs the UDP forward for public use.
+Simple Voice Chat (`voicechat-fabric-1.20.1-2.6.17.jar`), which uses UDP 24454.
+The Kubernetes Service and NetworkPolicy expose Minecraft TCP 25565 and
+optional voice chat UDP 24454; the public router UDP decision is separate from
+the initial TCP launch.
 
 The expected SHA-256 for the approved ZIP is:
 
@@ -90,12 +93,12 @@ client-install decision; the official pack already supplies its gameplay,
 library, performance, and content mods.
 
 Simple Voice Chat is already included in the official pack, and the Kubernetes
-Service and NetworkPolicy now expose its UDP 24454 endpoint. Public use still
-requires an explicit home-router UDP 24454 forward, followed by an external
-voice-chat test. Keep `voicechat-server.properties`
+Service and NetworkPolicy expose its UDP 24454 endpoint. Public voice-chat use
+is deferred until the owner explicitly approves a separate home-router UDP
+24454 forward and an external voice-chat test. Keep `voicechat-server.properties`
 at `port=24454`; do not change it to `-1`, which shares the Minecraft port.
 Keep `force_voice_chat=false` unless every allowed client is required to use
-voice chat. No UDP rule is needed for ordinary Minecraft gameplay.
+voice chat. No UDP router rule is needed for ordinary Minecraft gameplay.
 
 
 ## EULA and allowlist gate
@@ -160,16 +163,18 @@ values through this repository workflow.
 rule remains a separate launch gate. Before opening it, confirm the router
 reservation and the outside-network path.
 
-The only intended router rule is:
+The only intended initial router rule is:
 
 ```text
 WAN TCP 25565 -> verified MetalLB VIP TCP 25565
 ```
 
 Do not forward UDP, RCON 25575, NodePorts, SSH/Talos/Kubernetes ports, or the
-API server. Keep UPnP disabled for this mapping. `mc.popinvites.com` must be an
-explicit Cloudflare DNS-only A record pointing to the current home WAN IPv4;
-the wildcard's proxied response is not sufficient for Minecraft TCP.
+API server for the initial launch. Public voice chat is optional and requires
+a separately approved WAN UDP 24454 -> verified MetalLB VIP UDP 24454 rule
+plus an external voice-chat test. Keep UPnP disabled. `mc.popinvites.com` must
+be an explicit Cloudflare DNS-only A record pointing to the current home WAN
+IPv4; the wildcard's proxied response is not sufficient for Minecraft TCP.
 
 ## Backup and restore
 
@@ -192,15 +197,20 @@ absent until a backup is proven again. Restic is the primary recovery artifact;
 Longhorn snapshots/backups are a secondary crash-consistent disaster-recovery
 layer, not an HA mechanism.
 
-Before public launch:
+Verified recovery test at the current checkpoint:
 
-1. Create a known marker in a running test world.
-2. Observe a successful Restic snapshot and prune.
-3. Restore the snapshot into a throwaway PVC.
-4. Start a disconnected throwaway Homestead pod against the restored data.
-5. Confirm the marker and world load, then remove the disposable resources.
-6. Keep one pre-launch backup until the first real play session and another
-   restore test are complete.
+1. Marker `restore_test=20260810` was created in the running world.
+2. The application-aware `/usr/bin/backup now` path completed Restic snapshot
+   `8f2c792a`, returned exit code `0`, and wrote the success timestamp metric.
+3. The snapshot restored into a throwaway 100-GiB PVC.
+4. A disconnected throwaway Homestead pod staged the official pack, reached
+   the server `Done` signal, and returned the marker over localhost-only RCON.
+5. The disposable restore pod, Job, PVCs, and isolated pack PVC were removed.
+
+Keep the proven pre-launch backup until the first real play session and perform
+another restore check afterward. A pod restart clears the metrics `emptyDir`,
+so a success timestamp must be proven again before treating backup freshness
+as current.
 
 ## Launch checklist
 
@@ -214,6 +224,11 @@ The following infrastructure/configuration evidence is already recorded:
 - The MetalLB chart, `minecraft-public` pool, `10.0.0.254/32` VIP, and local
   endpoint are verified; the public guide/API is separate and reachable at
   `cozy.popinvites.com`.
+- The Longhorn `BackupTarget/default` is available, the GitOps-managed daily
+  snapshot/weekly backup jobs are attached to the world volume's `default`
+  group, and the application-aware Restic restore test above succeeded.
+  Restic is primary recovery; Longhorn is secondary crash-consistent
+  protection, not Minecraft HA.
 
 The following owner/operator gates remain to be evidenced before announcing or
 exposing the server:
@@ -221,8 +236,6 @@ exposing the server:
 - A person submits a name and exact case-sensitive Java username through the
   Turnstile-protected form; the owner approves the owner request and verifies
   the allowlist entry.
-- The operator proves the known-marker application-aware Restic backup and
-  throwaway restore sequence above. Backup logs alone are not proof.
 - The owner adds only WAN TCP `25565` -> the verified MetalLB VIP, after the
   LAN test. An outside-network TCP check to `mc.popinvites.com:25565` must
   succeed; an on-LAN result alone can be hidden by NAT loopback.
@@ -230,8 +243,10 @@ exposing the server:
   Homestead `1.3.7` profile and activates five-minute TCP/HTTPS monitors.
 
 Do not forward UDP, RCON, NodePorts, SSH/Talos/Kubernetes ports, or the API
-server. Keep UPnP disabled. Keep the router rule closed if any owner input,
-client, WAN, backup/restore, or external-monitor gate is incomplete.
+server for the initial launch. Public voice chat is optional and requires a
+separate approved UDP 24454 router rule and external test. Keep UPnP disabled.
+Keep the router rule closed if any owner input, client, WAN, or
+external-monitor gate is incomplete.
 
 To withdraw access, remove the router rule first, then remove or stop the
 explicit Minecraft DNS/DDNS record, take an application-aware backup, and only

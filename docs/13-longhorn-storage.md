@@ -239,65 +239,66 @@ hello-longhorn
 This confirms Longhorn can provision a PVC and persist data across pod replacement.
 
 
-## AWS S3 Backup Target
+## S3-Compatible Cloudflare R2 Backup Target
 
-Longhorn snapshots protect against some application mistakes, but they still live inside the cluster. The production-style storage milestone was to add an external backup target so PVC data can be recovered if a node, disk, or Longhorn volume is lost.
+Longhorn snapshots protect against some application mistakes, but they still
+live inside the cluster. The production storage milestone is an external
+S3-compatible backup target so PVC data can be recovered if a node, disk, or
+Longhorn volume is lost.
 
-This cluster now uses an AWS S3 backup target configured through Longhorn's `BackupTarget` custom resource:
+This cluster uses a Cloudflare R2 target through Longhorn's `BackupTarget`
+custom resource:
 
 ```text
 BackupTarget/default
 ```
 
-Important Longhorn v1.11 note: backup target configuration is managed through the `BackupTarget` CR, not the older legacy `Setting` CRs. For this cluster, the working configuration was created by updating `BackupTarget/default` and referencing an S3 credential Secret in `longhorn-system`.
-
-Keep the following out of Git:
-
-- AWS access key ID and secret access key
-- real bucket names or private prefixes, if they should not be public
-- local values/manifests under `local/`
-
-A sanitized example backup target manifest lives at:
+The current target uses R2's `auto` region and the private `longhorn` prefix.
+The access key, secret key, endpoint, and credential Secret remain outside
+plaintext Git. The encrypted manifest is:
 
 ```text
-manifests/longhorn/backup-target-values.example.yaml
+manifests/longhorn/longhorn-backup-target.secret.yaml
 ```
 
-Apply only after replacing placeholders in a local, uncommitted copy. The live cluster should show `BackupTarget/default` as available before relying on recurring backup jobs.
+The non-secret target declaration and recurring jobs are GitOps-managed:
 
-Useful checks:
+```text
+manifests/longhorn/config/backup-target.yaml
+manifests/longhorn/config/recurring-jobs.yaml
+manifests/argocd/apps/longhorn-config.yaml
+```
+
+Longhorn v1.11 uses the `BackupTarget` CR, not legacy `Setting` CRs. Verify
+the target is available before relying on recurring backup jobs:
 
 ```bash
 kubectl -n longhorn-system get backuptarget.longhorn.io default -o yaml
-kubectl -n longhorn-system get backups.longhorn.io
+kubectl -n longhorn-system get recurringjobs.longhorn.io
 ```
-
 
 ## Recurring Snapshot and Backup Jobs
 
-After the backup target is reachable, add simple recurring protection:
+The production `default` recurring-job group is attached to the Cozy Friends
+world volume:
 
 - daily local snapshots, retained for 7 days
 - weekly external backups, retained for 4 weeks
 
-Example jobs live at:
-
-```text
-manifests/longhorn/recurring-jobs.example.yaml
-```
-
-Apply the examples after reviewing the schedule and retention:
+The live volume must retain the label
+`recurring-job-group.longhorn.io/default=enabled`; without the matching
+RecurringJob resources the label is inert. Confirm both sides:
 
 ```bash
-kubectl apply -f manifests/longhorn/recurring-jobs.example.yaml
 kubectl -n longhorn-system get recurringjobs.longhorn.io
+kubectl -n longhorn-system get volumes.longhorn.io \
+  -l recurring-job-group.longhorn.io/default=enabled
 ```
-
-Then attach the jobs to selected volumes through the Longhorn UI or by assigning the matching recurring job group to a StorageClass/volume. For a homelab portfolio, it is enough to show the schedule, retention, target, and one successful backup artifact.
 
 ## Restore Test Performed
 
-I verified the S3 backup target with a disposable Longhorn volume restore.
+The earlier AWS S3-compatible test remains a historical Longhorn volume
+restore record; the current production target is Cloudflare R2 above.
 
 Test result:
 
@@ -338,8 +339,7 @@ kubectl delete pvc longhorn-test-pvc
 
 ## Future Work
 
-- enable recurring snapshots/backups for selected volumes
+- periodically repeat restore tests for real stateful workloads
 - expose Longhorn UI privately over Tailscale if not already private
 - increase replica count after adding more physical nodes
 - document the multi-node storage plan
-- periodically repeat restore tests for real stateful workloads
