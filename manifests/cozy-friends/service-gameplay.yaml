@@ -12,6 +12,8 @@ metadata:
     metallb.io/loadBalancerIPs: 10.0.0.254
 spec:
   type: LoadBalancer
+  externalIPs:
+    - 10.0.0.105
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/name: homestead

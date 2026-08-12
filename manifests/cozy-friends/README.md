@@ -41,8 +41,10 @@ add a name through localhost-only RCON.
 - `homestead-pack` is a private 2-GiB Longhorn RWO PVC. The server mounts it at
   `/pack` read-only; the ZIP is not in Git, an image, or an OCI registry.
 - The gameplay Service is the only `LoadBalancer`. The headless and backup
-  metrics Services are internal. The gameplay Service exposes optional voice
-  chat UDP 24454; there is deliberately no RCON Service.
+  metrics Services are internal. It exposes Minecraft TCP 25565 and optional
+  voice chat UDP 24454, accepts the WAN fallback through
+  `externalIPs: [10.0.0.105]`, and has deliberately no RCON Service. No extra
+  proxy or NodePort is used.
 
 All containers use pinned image digests, run as non-root with RuntimeDefault
 seccomp, drop all capabilities, disallow privilege escalation, and do not
@@ -158,23 +160,32 @@ values through this repository workflow.
 
 ## Verified VIP and public edge gate
 
-`service-gameplay.yaml` selects the LAN-validated MetalLB VIP
-`10.0.0.254/32`. The Service has a ready local endpoint, but the router WAN
-rule remains a separate launch gate. Before opening it, confirm the router
-reservation and the outside-network path.
+LAN clients use the MetalLB VIP selected by `service-gameplay.yaml`:
+`10.0.0.254/32`. WAN traffic uses the same gameplay Service through its
+node-bound `externalIPs: [10.0.0.105]` compatibility fallback on stable node
+`talos-ssy-pdo`; no extra proxy or NodePort is inserted. Kubernetes warns that
+`externalIPs` may be deprecated or unsupported in future clusters, so verify
+this path after upgrades.
 
-The only intended initial router rule is:
+The initial router rule remains a separate pending launch gate:
 
 ```text
-WAN TCP 25565 -> verified MetalLB VIP TCP 25565
+WAN TCP 25565 -> talos-ssy-pdo (10.0.0.105) TCP 25565
 ```
 
-Do not forward UDP, RCON 25575, NodePorts, SSH/Talos/Kubernetes ports, or the
-API server for the initial launch. Public voice chat is optional and requires
-a separately approved WAN UDP 24454 -> verified MetalLB VIP UDP 24454 rule
-plus an external voice-chat test. Keep UPnP disabled. `mc.popinvites.com` must
-be an explicit Cloudflare DNS-only A record pointing to the current home WAN
-IPv4; the wildcard's proxied response is not sufficient for Minecraft TCP.
+Optional voice chat is not required for ordinary Minecraft gameplay. If
+approved separately, add this distinct rule and perform an external voice test:
+
+```text
+WAN UDP 24454 -> talos-ssy-pdo (10.0.0.105) UDP 24454
+```
+
+Do not forward RCON 25575, NodePorts, SSH/Talos/Kubernetes ports, or the API
+server. Keep UPnP disabled. `mc.popinvites.com` must be an explicit Cloudflare
+DNS-only A record pointing to the current home WAN IPv4; the wildcard's
+proxied response is not sufficient for Minecraft TCP. If `.105` fails, WAN
+gameplay and optional voice chat fail even if MetalLB moves `10.0.0.254`;
+LAN clients retain the VIP path.
 
 ## Backup and restore
 
@@ -236,17 +247,18 @@ exposing the server:
 - A person submits a name and exact case-sensitive Java username through the
   Turnstile-protected form; the owner approves the owner request and verifies
   the allowlist entry.
-- The owner adds only WAN TCP `25565` -> the verified MetalLB VIP, after the
-  LAN test. An outside-network TCP check to `mc.popinvites.com:25565` must
-  succeed; an on-LAN result alone can be hidden by NAT loopback.
+- The owner adds only WAN TCP `25565` -> `10.0.0.105:25565`, after the LAN test.
+  An outside-network TCP check to `mc.popinvites.com:25565` must succeed; an
+  on-LAN result alone can be hidden by NAT loopback.
 - The owner joins from outside the home network with the CurseForge
   Homestead `1.3.7` profile and activates five-minute TCP/HTTPS monitors.
 
-Do not forward UDP, RCON, NodePorts, SSH/Talos/Kubernetes ports, or the API
-server for the initial launch. Public voice chat is optional and requires a
-separate approved UDP 24454 router rule and external test. Keep UPnP disabled.
-Keep the router rule closed if any owner input, client, WAN, or
-external-monitor gate is incomplete.
+Optional voice chat requires a separate approved WAN UDP `24454` ->
+`10.0.0.105:24454` rule and external test; it is not required for ordinary
+gameplay. Do not forward RCON, NodePorts, SSH/Talos/Kubernetes ports, or the
+API server. Keep UPnP disabled. Keep all router rules closed if any owner
+input, client, WAN, allowlist, or external-monitor gate is incomplete. This
+README does not claim public launch.
 
 To withdraw access, remove the router rule first, then remove or stop the
 explicit Minecraft DNS/DDNS record, take an application-aware backup, and only

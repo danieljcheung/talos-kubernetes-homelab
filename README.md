@@ -118,12 +118,22 @@ install the CurseForge app, search for Homestead, choose `1.3.7`, allocate
 reconstructed-pack path is presented as an alternate launcher instruction.
 
 ```text
-Minecraft Java -> DNS-only mc.popinvites.com -> home WAN IPv4
-               -> router TCP 25565 -> MetalLB VIP -> Cozy Friends Service
+LAN Minecraft Java -> MetalLB VIP 10.0.0.254 -> Cozy Friends gameplay Service
+
+WAN Minecraft Java -> DNS-only mc.popinvites.com -> home WAN IPv4
+                  -> pending Rogers Xfinity TCP 25565 rule
+                  -> talos-ssy-pdo (10.0.0.105)
+                  -> Cozy Friends gameplay Service externalIPs: [10.0.0.105]
 
 Browser -> proxied *.popinvites.com -> existing Cloudflare Tunnel
         -> ingress-nginx -> cozy.popinvites.com Ingress -> Cozy guide Service
 ```
+
+The gameplay Service remains the only LoadBalancer: MetalLB advertises
+`10.0.0.254` for LAN clients, while `externalIPs: [10.0.0.105]` accepts the
+direct WAN path on the stable node. This is a node-bound compatibility fallback;
+Kubernetes warns `externalIPs` may be deprecated or unsupported in future
+clusters, so verify it after upgrades. No extra proxy or NodePort is used.
 
 Infrastructure evidence currently recorded includes the Argo-synced guide/API
 returning HTTP 200, the installed MetalLB chart and production
@@ -135,17 +145,23 @@ world marker over localhost-only RCON. The VIP is outside the router DHCP
 range (`.2`–`.253`) and has a ready local endpoint. These facts do not prove a
 public Minecraft client, WAN forwarding, or outside-network monitor.
 
-Remaining owner/operator launch gates are explicit:
+Remaining owner/operator launch gates are explicit and still pending:
 
-1. The owner adds only WAN TCP `25565` -> `10.0.0.254:25565` in the Rogers
-   Xfinity app; no UDP, RCON, NodePort, or admin forwarding.
-   Optional voice chat uses UDP `24454` only after a separate explicit router
-   decision and external test; it is not part of the initial TCP launch.
+1. The owner adds only WAN TCP `25565` -> `10.0.0.105:25565` in the Rogers
+   Xfinity app; no RCON, NodePort, or admin forwarding. Optional voice chat
+   requires a separately approved WAN UDP `24454` -> `10.0.0.105:24454` rule
+   and external test; UDP is not required for ordinary Minecraft gameplay.
 2. A person submits their name and exact, case-sensitive Java username through
    the Turnstile-protected form; the owner approves the owner row and confirms
    the local allowlist entry.
 3. After the LAN test, the owner joins from outside the home network with the
    CurseForge profile and activates five-minute UptimeRobot TCP/HTTPS checks.
+
+The node-bound WAN path is not equivalent to MetalLB failover: if
+`10.0.0.105` or `talos-ssy-pdo` fails, WAN gameplay (and optional voice chat)
+fails even if MetalLB moves `10.0.0.254` to another node. LAN clients can still
+use the MetalLB VIP while the node path is unavailable. These pending gates
+mean this repository does not claim public Minecraft launch.
 
 The form sends `POST /api/usernames` JSON
 `{"name":"...","username":"...","turnstileToken":"..."}`. The API accepts

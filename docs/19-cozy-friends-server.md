@@ -51,15 +51,21 @@ Primary source links:
 
 ## 1. Intended topology and exposure
 
-The two public names intentionally use different paths:
+The two public names intentionally use different paths, and LAN Minecraft
+clients use the MetalLB VIP while the WAN fallback is node-bound:
 
 ```text
-Minecraft Java client
+LAN Minecraft Java client
+  -> MetalLB VIP 10.0.0.254
+  -> cozy-friends/homestead gameplay Service
+  -> homestead-0 StatefulSet pod
+
+WAN Minecraft Java client
   -> DNS-only mc.popinvites.com
   -> current home WAN IPv4
-  -> router TCP 25565
-  -> MetalLB VIP 10.0.0.254/32
-  -> cozy-friends/homestead gameplay Service
+  -> pending Rogers TCP 25565 rule
+  -> talos-ssy-pdo (10.0.0.105)
+  -> gameplay Service externalIPs: [10.0.0.105]
   -> homestead-0 StatefulSet pod
 
 Web browser
@@ -70,11 +76,30 @@ Web browser
   -> unprivileged nginx pod
 ```
 
-`mc.popinvites.com` must be an explicit Cloudflare `A` record for the current home WAN IPv4 with **DNS only** (gray cloud). It overrides the proxied wildcard for that exact name. The `cloudflare-ddns` workload maintains this record every five minutes and has no Service. Do not expose the Kubernetes API, Talos, node SSH, NodePorts, RCON, or any UDP port.
+`mc.popinvites.com` must be an explicit Cloudflare `A` record for the current
+home WAN IPv4 with **DNS only** (gray cloud). It overrides the proxied
+wildcard for that exact name. The `cloudflare-ddns` workload maintains this
+record every five minutes and has no Service. The gameplay Service remains the
+only LoadBalancer: `10.0.0.254` is the LAN VIP and
+`externalIPs: [10.0.0.105]` is the direct-node WAN compatibility fallback.
+Kubernetes warns `externalIPs` may be deprecated or unsupported in future
+clusters, so verify it after upgrades. No extra proxy or NodePort is used.
 
-`cozy.popinvites.com` remains covered by the existing proxied `*.popinvites.com` Tunnel route. Do not create a second tunnel, a separate `cozy` DNS record, or a Cloudflare Access policy for the public guide. The guide contains no private IPs or credentials.
+The initial router rule is pending: WAN TCP `25565` ->
+`10.0.0.105:25565`. Optional voice chat is not required for ordinary gameplay;
+it requires a separate approved WAN UDP `24454` ->
+`10.0.0.105:24454` rule and external voice test. Do not expose the Kubernetes
+API, Talos, node SSH, NodePorts, RCON, or other admin ports.
 
-MetalLB is only a LAN address-advertisement and Kubernetes failover mechanism. It is not a firewall, DDoS service, encryption boundary, or substitute for the router rule. `externalTrafficPolicy: Local` is required on the gameplay Service so logs can retain the real client source address.
+`cozy.popinvites.com` remains covered by the existing proxied
+`*.popinvites.com` Tunnel route. Do not create a second tunnel, a separate
+`cozy` DNS record, or a Cloudflare Access policy for the public guide. The
+guide contains no private IPs or credentials.
+
+MetalLB is only a LAN address-advertisement and Kubernetes failover mechanism.
+It is not a firewall, DDoS service, encryption boundary, or substitute for
+the router rule. `externalTrafficPolicy: Local` is required on the gameplay
+Service so logs can retain the real client source address.
 
 ## 2. Launch gates and current status
 
@@ -110,8 +135,11 @@ Remaining owner/operator launch gates (these are evidence and credential
 boundaries, not claims that the EULA, MetalLB pool, or encrypted Secret
 contracts are absent):
 
-1. The owner must add only WAN TCP `25565` -> `10.0.0.254:25565` through the
-   Rogers Xfinity app. Do not forward UDP, RCON, NodePorts, or admin ports.
+1. The owner must add only WAN TCP `25565` -> `10.0.0.105:25565` through the
+   Rogers Xfinity app. Do not forward RCON, NodePorts, or admin ports. Optional
+   voice chat requires a separate approved WAN UDP `24454` ->
+   `10.0.0.105:24454` rule and external voice test; it is not required for
+   ordinary gameplay.
 2. The owner must submit a person's name and exact, case-sensitive Java
    username through the Turnstile-protected public form, then use the
    token-gated admin dashboard to approve the owner account. Confirm the
@@ -125,6 +153,12 @@ contracts are absent):
    outside-network check. No external monitor is claimed proven here.
 5. Friends may submit their own name and exact Java username after the form
    is live; each request still requires Turnstile, owner review, and approval.
+
+Because the WAN path is pinned to the stable node, failure of
+`10.0.0.105` or `talos-ssy-pdo` takes WAN gameplay and optional voice chat
+offline even if MetalLB moves `10.0.0.254` to another node. LAN clients can
+still use the MetalLB VIP. The router rule, allowlist, outside-network join,
+and monitors remain pending; this runbook does not claim public launch.
 
 The router's web UI delegates port-forward configuration to the Rogers Xfinity
 app, so the edge rule is intentionally still absent from the recorded
@@ -151,7 +185,7 @@ wc -c Homestead1.3.7_server_pack.zip
 shasum -a 256 Homestead1.3.7_server_pack.zip
 ```
 
-Inspect `HOW-TO-RUN.md`, `variables.txt`, `server.properties`, `mods/`, and `config/`. Confirm Minecraft `1.20.1`, Fabric, Java `17`, and no additional public TCP or UDP port. The trusted-workstation smoke test may use `GENERIC_PACK` with `GENERIC_PACK_STRIP_DIRS=1` when the archive has one wrapper directory. The deployed restricted pod instead verifies and unpacks the ZIP with its non-root `stage-homestead-pack` init container, then skips the image's root-only generic-pack reapply path. Confirm a 1.3.7 client joins and the server stops cleanly before the helper pod copies the ZIP into `/pack` and is deleted.
+Inspect `HOW-TO-RUN.md`, `variables.txt`, `server.properties`, `mods/`, and `config/`. Confirm Minecraft `1.20.1`, Fabric, Java `17`, and no additional public TCP port; the optional voice-chat endpoint is UDP `24454` and must be treated as a separate router rule. The trusted-workstation smoke test may use `GENERIC_PACK` with `GENERIC_PACK_STRIP_DIRS=1` when the archive has one wrapper directory. The deployed restricted pod instead verifies and unpacks the ZIP with its non-root `stage-homestead-pack` init container, then skips the image's root-only generic-pack reapply path. Confirm a 1.3.7 client joins and the server stops cleanly before the helper pod copies the ZIP into `/pack` and is deleted.
 
 The copyright terms permit private or public hosting, but do not permit republishing a derived server image or redistributing the pack. Keep the archive private.
 
@@ -356,13 +390,23 @@ Cloudflare login, MFA, token creation, and copying the one-time token directly i
 
 ### Router
 
-Only after the MetalLB gameplay Service has the verified VIP and works from the LAN, create this single rule:
+Only after the gameplay Service has the verified MetalLB VIP and works from the
+LAN, the owner may add the pending initial rule in the Rogers Xfinity app:
 
 ```text
-WAN TCP 25565 -> <verified-minecraft-vip> TCP 25565
+WAN TCP 25565 -> talos-ssy-pdo (10.0.0.105) TCP 25565
 ```
 
-Keep UPnP disabled for this mapping. Do not forward UDP, RCON `25575`, NodePorts, node SSH/Talos/Kubernetes ports, or the API server. If pack inspection identifies a voice-chat UDP requirement, stop and request a separate port/security decision; do not widen this rule.
+Keep UPnP disabled. Optional voice chat is not required for ordinary gameplay;
+it needs a separate approved rule:
+
+```text
+WAN UDP 24454 -> talos-ssy-pdo (10.0.0.105) UDP 24454
+```
+
+Do not forward RCON `25575`, NodePorts, node SSH/Talos/Kubernetes ports, the
+API server, or any other administrative endpoint. No extra proxy or NodePort
+is part of this direct-node path.
 
 ## 9. Backups and restore
 
@@ -438,7 +482,11 @@ kubectl -n monitoring get prometheus,prometheusrule,servicemonitor
 kubectl -n monitoring get prometheusrule homelab-alerts
 ```
 
-The planned external monitors are intentionally outside the home network: a five-minute custom TCP check of `mc.popinvites.com:25565` and a five-minute HTTPS check of `https://cozy.popinvites.com` expecting HTTP 200. They cover DNS, WAN, router, VIP, and public website failures that in-cluster Prometheus cannot see.
+The planned external monitors are intentionally outside the home network: a
+five-minute custom TCP check of `mc.popinvites.com:25565` and a five-minute
+HTTPS check of `https://cozy.popinvites.com` expecting HTTP 200. They cover
+DNS, WAN, router, the node-bound `.105` path, and public website failures that
+in-cluster Prometheus cannot see; the checks remain a launch gate.
 
 ## 11. Failure modes and first response
 
@@ -446,6 +494,7 @@ The planned external monitors are intentionally outside the home network: a five
 | --- | --- |
 | Kubernetes API unreachable | Stop all mutation. Restore workstation/API routing and repeat read-only preflight. |
 | VIP allocation or ARP fails | Remove the temporary validation resources, check DHCP/ARP/subnet/interface and kube-proxy mode, and do not open WAN forwarding. |
+| Stable node `talos-ssy-pdo` / `10.0.0.105` unavailable | WAN gameplay and optional voice chat fail even if MetalLB moves `10.0.0.254`; LAN clients can still use the MetalLB VIP. Restore the node-bound path before public access. |
 | WAN is private/CGNAT or inbound TCP is blocked | Stop the direct-hosting path. MetalLB cannot solve CGNAT; use a separately approved relay/Spectrum design instead. |
 | `mc` resolves to Cloudflare addresses | The explicit DNS-only record is missing or proxied. Correct Cloudflare/DDNS state before opening the router. |
 | `cozy` returns 404/502 | Check wildcard Tunnel, Host preservation, ingress-nginx, Ingress, Service, and generated ConfigMap; do not create a second Tunnel. |
@@ -460,7 +509,8 @@ The planned external monitors are intentionally outside the home network: a five
 
 Withdraw public reachability before removing platform resources:
 
-1. Disable/remove the router WAN TCP `25565` rule.
+1. Disable/remove the router WAN TCP `25565` rule and any separately approved
+   WAN UDP `24454` voice-chat rule.
 2. Delete the explicit `mc.popinvites.com` record or stop the DDNS workload if direct access must be withdrawn; do not alter the proxied wildcard needed by `cozy`.
 3. Complete a successful application-aware backup, then scale the single StatefulSet to zero if the service must stop:
 

@@ -148,11 +148,15 @@ The Homestead 1.3.7 hosting design adds two intentionally different routes
 under `popinvites.com`:
 
 ```text
-Minecraft Java
-  -> mc.popinvites.com explicit DNS-only A record
-  -> home WAN IPv4 -> router TCP 25565
-  -> MetalLB Layer 2 VIP 10.0.0.254/32 (LAN-verified; WAN rule pending)
+LAN Minecraft Java
+  -> MetalLB Layer 2 VIP 10.0.0.254
   -> cozy-friends/homestead gameplay Service
+
+WAN Minecraft Java
+  -> mc.popinvites.com explicit DNS-only A record
+  -> home WAN IPv4 -> pending Rogers TCP 25565 rule
+  -> talos-ssy-pdo (10.0.0.105)
+  -> gameplay Service externalIPs: [10.0.0.105]
 
 Web browser
   -> proxied *.popinvites.com wildcard
@@ -161,19 +165,23 @@ Web browser
   -> cozy-friends-site Service
 ```
 
-The `mc` record must be gray-cloud/DNS-only; `cozy` remains covered by the
-existing proxied wildcard. No second Tunnel, RCON Service, or UDP forwarding
-for the initial TCP launch is part of this design. The router reports DHCP
-`.2`–`.253`; `.254` was absent from the lease page, ARP, and ping. Its WAN
-IPv4 `99.227.195.189` matches an independent public probe, but the router's
-web UI delegates port-forward setup to the Rogers Xfinity app. Public launch
-remains gated by the TCP 25565 rule, EULA, allowlist, client smoke test, and
-outside-network monitors. Public voice chat is optional and requires a separate
-approved UDP 24454 rule and external test.
+The gameplay Service remains the only LoadBalancer. MetalLB supplies the LAN
+VIP, and `externalIPs` is the node-bound compatibility fallback for the Rogers
+path; no extra proxy or NodePort is used. Kubernetes warns that
+`externalIPs` may be deprecated or unsupported in future clusters, so verify
+it after upgrades. The initial router rule is pending as WAN TCP `25565` ->
+`10.0.0.105:25565`. Optional voice chat is not required for ordinary gameplay;
+it needs a separate approved WAN UDP `24454` -> `10.0.0.105:24454` rule and
+external test. Never expose RCON or administrative ports.
 
-The Minecraft world uses one StatefulSet replica and Longhorn replica count 1.
-That combination is persistent storage, not high availability: a node or disk
-failure can still require restore. Application-aware Restic backups are the
-primary recovery artifact; Longhorn snapshots and external backups are
-secondary disaster recovery. The [Cozy Friends Server runbook](19-cozy-friends-server.md)
+The `mc` record must be gray-cloud/DNS-only; `cozy` remains covered by the
+existing proxied wildcard. Router rules, the allowlist, an outside-network
+join, and external monitoring remain pending, so this is not a public-launch
+claim. If `10.0.0.105` or `talos-ssy-pdo` fails, WAN gameplay and optional
+voice chat fail even if MetalLB moves `10.0.0.254`; LAN clients retain access
+through the VIP. The Minecraft world uses one StatefulSet replica and Longhorn
+replica count 1. That combination is persistent storage, not high availability:
+a node or disk failure can still require restore. Application-aware Restic
+backups are the primary recovery artifact; Longhorn snapshots and external
+backups are secondary disaster recovery. The [Cozy Friends Server runbook](19-cozy-friends-server.md)
 covers operations and rollback.

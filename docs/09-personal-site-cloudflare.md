@@ -113,24 +113,36 @@ browser -> Cloudflare proxied wildcard -> existing Tunnel
 ```
 
 Do not create a second Tunnel, a separate `cozy` DNS record, or a Cloudflare
-Access policy for the public guide. The Minecraft path is intentionally
-different and must use an explicit gray-cloud/DNS-only record:
+Access policy for the public guide. The Minecraft path intentionally uses an
+explicit gray-cloud/DNS-only record, but LAN and WAN clients terminate on
+different targets:
 
 ```text
-Java client -> mc.popinvites.com DNS-only A record
-            -> home WAN IPv4 -> router TCP 25565
-            -> MetalLB LAN-verified VIP 10.0.0.254/32
+LAN Java client -> MetalLB VIP 10.0.0.254
+                -> cozy-friends gameplay Service
+
+WAN Java client -> mc.popinvites.com DNS-only A record
+                -> home WAN IPv4 -> pending Rogers TCP 25565 rule
+                -> talos-ssy-pdo (10.0.0.105)
+                -> gameplay Service externalIPs: [10.0.0.105]
 ```
+
+The gameplay Service remains the only LoadBalancer; no extra proxy or NodePort
+is inserted for the direct-node path. The `externalIPs` entry is a node-bound
+compatibility fallback for Rogers; Kubernetes warns it may be deprecated or
+unsupported in future clusters, so verify it after upgrades. The initial router
+rule is still pending: WAN TCP `25565` -> `10.0.0.105:25565`. Optional voice
+chat is not required for ordinary gameplay and needs a separately approved WAN
+UDP `24454` -> `10.0.0.105:24454` rule plus an external test. Do not expose
+RCON, the Kubernetes API, Talos, node SSH, NodePorts, or other admin ports.
 
 The router reports DHCP `.2`–`.253`; `.254` was absent from the lease page,
 ARP, and ping during preflight. The WAN address `99.227.195.189` matches an
-independent public probe. The router's web UI delegates port-forward setup to
-the Rogers Xfinity app, so the TCP 25565 edge rule remains pending.
-Public launch is still gated by the EULA, allowlist, TCP 25565 edge rule,
-outside-network client, and monitor checks. The application-aware Restic
-backup and throwaway restore are now proven; Longhorn replica count 1 provides
-persistent storage rather than high availability, and Longhorn snapshots/R2
-backups remain secondary disaster recovery.
+independent public probe. The Rogers Xfinity app owns port-forward setup, so
+the TCP rule, outside-network join, allowlist confirmation, and monitor checks
+remain pending. If `10.0.0.105` or `talos-ssy-pdo` fails, WAN gameplay and
+optional voice chat fail even if MetalLB moves `10.0.0.254`; LAN clients retain
+the VIP path. Public launch is not claimed.
 [Cozy Friends Server runbook](19-cozy-friends-server.md) for the edge rule,
 SOPS boundary, and rollback order.
 
