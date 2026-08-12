@@ -2,12 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import {
+  CONFIGMAP_SIZE_LIMIT_BYTES,
+  COZY_BINARY_ASSET_NAMES,
   DEFAULT_CONFIGMAP_PATH,
   DEFAULT_DIST_DIR,
+  assertConfigMapSize,
   generateConfigMapYaml,
   normalizeRepoPath,
   parseCliArgs,
   parseConfigMap,
+  renderBinaryData,
   runSyncOrCheck
 } from './generate-configmap.mjs';
 
@@ -17,18 +21,56 @@ function createMockFs(files) {
     existsSync(p) {
       return p in files;
     },
-    readFileSync(p, encoding) {
+    readFileSync(p) {
       if (!(p in files)) {
         throw new Error(`ENOENT: no such file or directory, open '${p}'`);
       }
       return files[p];
     },
-
-    writeFileSync(p, content, encoding) {
+    readdirSync(directory) {
+      const prefix = directory.endsWith(path.sep) ? directory : `${directory}${path.sep}`;
+      const names = new Set();
+      for (const filePath of Object.keys(files)) {
+        if (!filePath.startsWith(prefix)) continue;
+        const remainder = filePath.slice(prefix.length);
+        if (remainder.length > 0) names.add(remainder.split(path.sep)[0]);
+      }
+      return [...names].sort().map((name) => {
+        const absolutePath = path.join(directory, name);
+        const directoryPrefix = `${absolutePath}${path.sep}`;
+        const isDirectory = Object.keys(files).some((filePath) => filePath.startsWith(directoryPrefix));
+        return {
+          name,
+          isFile: () => !isDirectory,
+          isDirectory: () => isDirectory
+        };
+      });
+    },
+    writeFileSync(p, content) {
       files[p] = content;
     }
   };
 }
+function createCozyBuildFiles({ missing = [], extra = [] } = {}) {
+  const distDir = '/mock/site/dist-cozy';
+  const configMapPath = '/mock/manifests/cozy-friends-site/configmap.yaml';
+  const files = {
+    [path.join(distDir, 'index.html')]: '<html>cozy</html>\n',
+    [path.join(distDir, 'assets', 'app.js')]: 'console.log("cozy");',
+    [path.join(distDir, 'assets', 'app.css')]: 'body { color: green; }',
+    [configMapPath]: 'apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: cozy-friends-site\n'
+  };
+  for (const name of COZY_BINARY_ASSET_NAMES) {
+    if (!missing.includes(name)) {
+      files[path.join(distDir, 'assets', name)] = Buffer.from(`asset:${name}`);
+    }
+  }
+  for (const name of extra) {
+    files[path.join(distDir, 'assets', name)] = Buffer.from(`asset:${name}`);
+  }
+  return { files, distDir, configMapPath };
+}
+
 test('parseCliArgs preserves portfolio defaults and check mode', () => {
   const parsed = parseCliArgs(['--check']);
 
@@ -131,6 +173,71 @@ binaryData:
 
   assert.equal(result, expectedYaml);
 });
+test('renderBinaryData is deterministic and emits sorted base64 block scalars', () => {
+  const first = renderBinaryData({
+    'cozy-user.webp': Buffer.from([0x00, 0xff]),
+    'cozy-calendar.webp': Buffer.from('calendar')
+  });
+  const second = renderBinaryData({
+    'cozy-calendar.webp': Buffer.from('calendar'),
+    'cozy-user.webp': Buffer.from([0x00, 0xff])
+  });
+
+  assert.equal(first, second);
+  assert.ok(first.indexOf('  cozy-calendar.webp: |') < first.indexOf('  cozy-user.webp: |'));
+  assert.match(first, /    Y2FsZW5kYXI=/);
+  assert.match(first, /    AP8=/);
+});
+
+test('runSyncOrCheck encodes the exact Cozy binary asset contract', () => {
+  const { files, distDir, configMapPath } = createCozyBuildFiles();
+  const result = runSyncOrCheck({
+    configMapPath,
+    distDir,
+    checkMode: false,
+    fsInject: createMockFs(files)
+  });
+
+  assert.equal(result.status, 'written');
+  const generated = files[configMapPath];
+  assert.match(generated, /binaryData:\n/);
+  for (const name of COZY_BINARY_ASSET_NAMES) {
+    assert.match(generated, new RegExp(`  ${name}: \\|`));
+  }
+  assert.ok(generated.indexOf('  cozy-calendar.webp: |') < generated.indexOf('  cozy-connect.webp: |'));
+  assert.match(generated, /    YXNzZXQ6Y296eS1jYWxlbmRhci53ZWJw/);
+  assert.ok(Buffer.byteLength(generated, 'utf8') < CONFIGMAP_SIZE_LIMIT_BYTES);
+});
+
+test('runSyncOrCheck rejects missing Cozy binary assets instead of omitting them', () => {
+  const { files, distDir, configMapPath } = createCozyBuildFiles({ missing: ['cozy-calendar.webp'] });
+
+  assert.throws(() => runSyncOrCheck({
+    configMapPath,
+    distDir,
+    checkMode: false,
+    fsInject: createMockFs(files)
+  }), /Missing binary asset files:[\s\S]*assets\/cozy-calendar\.webp/);
+});
+
+test('runSyncOrCheck rejects extra Cozy build assets instead of omitting them', () => {
+  const { files, distDir, configMapPath } = createCozyBuildFiles({ extra: ['cozy-extra.webp'] });
+
+  assert.throws(() => runSyncOrCheck({
+    configMapPath,
+    distDir,
+    checkMode: false,
+    fsInject: createMockFs(files)
+  }), /Unexpected Cozy build assets[\s\S]*assets\/cozy-extra\.webp/);
+});
+
+test('assertConfigMapSize rejects output at or above the Kubernetes object limit', () => {
+  assert.throws(
+    () => assertConfigMapSize('x'.repeat(CONFIGMAP_SIZE_LIMIT_BYTES)),
+    /must remain below .*1 MiB Kubernetes limit/
+  );
+});
+
 
 test('runSyncOrCheck throws when required build output files are missing', () => {
   const distDir = '/mock/site/dist';
