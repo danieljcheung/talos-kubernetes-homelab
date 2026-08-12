@@ -368,7 +368,7 @@ Keep UPnP disabled for this mapping. Do not forward UDP, RCON `25575`, NodePorts
 
 The Minecraft StatefulSet has one replica and a 100 GiB Longhorn RWO world volume (`data-homestead-0`). A single replica is deliberate: never scale the same world horizontally. Longhorn replica count 1 is persistent storage, not high availability; application-aware Restic backups are the primary recovery artifact and Longhorn snapshots/external backups are secondary crash-consistent protection.
 
-The `itzg/mc-backup:2026.8.0` sidecar runs Restic at `0 3 * * *`, reaches RCON only at `127.0.0.1:25575`, and must issue `save-off`, `save-all`, backup, then `save-on`, including `save-on` after a failed backup. Retention is seven daily, four weekly, and three monthly snapshots. Restic and S3 values come only from the encrypted Secret.
+The `itzg/mc-backup:2026.8.0` sidecar runs Restic at `0 3 * * *`, reaches RCON only at `127.0.0.1:25575`, and must issue `save-off`, `save-all`, backup, then `save-on`, including `save-on` after a failed backup. Retention is seven daily, four weekly, and three monthly snapshots. Restic and S3-compatible R2 values come only from the encrypted Secret.
 
 The backup and node-exporter textfile sidecars share an `emptyDir` mounted at `/metrics`. The hook writes:
 
