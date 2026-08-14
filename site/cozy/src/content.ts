@@ -9,6 +9,10 @@ export const COUNTDOWN_BODY = 'The first campfire is almost ready.'
 export const COUNTDOWN_LIVE = 'Launch is live. Welcome to the world.'
 export const COUNTDOWN_WAITING = 'Time until launch'
 export const COUNTDOWN_UNITS = ['days', 'hours', 'minutes', 'seconds'] as const
+export const SERVER_STATUS_LABEL = 'LIVE SERVER'
+export const SERVER_STATUS_LOADING = 'Checking the server…'
+export const SERVER_STATUS_UNAVAILABLE = 'Server status is unavailable.'
+export const SERVER_STATUS_PLAYERS = 'players online'
 
 export const JOIN_HEADING = 'HOW TO JOIN'
 export const JOIN_STEPS = [

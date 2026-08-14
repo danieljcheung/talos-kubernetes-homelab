@@ -33,7 +33,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: approval-api
-          image: ghcr.io/danieljcheung/cozy-friends-approval-api@sha256:5265bb70fe72e81fc4bb09eb5bb91ad7c2e59fd28e7559aba1e4599c2cf44cc8
+          image: ghcr.io/danieljcheung/cozy-friends-approval-api@sha256:c958e1af08dfa6cd933be882e233a3aaf1be72851f2b495211e0c903ea5832b5
           imagePullPolicy: IfNotPresent
           securityContext:
             runAsNonRoot: true
@@ -75,6 +75,12 @@ spec:
                   key: turnstile-secret-key
             - name: TURNSTILE_EXPECTED_HOSTNAME
               value: cozy.popinvites.com
+            - name: MINECRAFT_STATUS_HOST
+              value: homestead-headless.cozy-friends.svc.cluster.local
+            - name: MINECRAFT_STATUS_PORT
+              value: "25565"
+            - name: MINECRAFT_STATUS_TIMEOUT
+              value: "2"
           livenessProbe:
             httpGet:
               path: /healthz

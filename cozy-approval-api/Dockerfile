@@ -10,7 +10,7 @@ RUN addgroup -S -g 10001 app \
 
 WORKDIR /app
 COPY manifests/cozy-friends-site/approval-api.py /app/approval-api.py
-
+COPY cozy-approval-api/minecraft_status.py /app/minecraft_status.py
 USER 10001:10001
 EXPOSE 8080
 ENTRYPOINT ["python", "/app/approval-api.py"]

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import CozyFriendsApp, { getCountdownSnapshot, type CozyFriendsAppProps } from './CozyFriendsApp'
+import CozyFriendsApp, {
+  getCountdownSnapshot,
+  parseMinecraftStatus,
+  PlayerCountIndicator,
+  type CozyFriendsAppProps
+} from './CozyFriendsApp'
 import {
   COUNTDOWN_HEADING,
   COUNTDOWN_LIVE,
@@ -11,6 +16,10 @@ import {
   NAME_REQUEST_LABEL,
   NAME_REQUEST_PLACEHOLDER,
   SERVER_ADDRESS,
+  SERVER_STATUS_LABEL,
+  SERVER_STATUS_LOADING,
+  SERVER_STATUS_PLAYERS,
+  SERVER_STATUS_UNAVAILABLE,
   TURNSTILE_REQUIRED,
   TURNSTILE_UNAVAILABLE,
   USERNAME_REQUEST_FAILURE,
@@ -63,9 +72,22 @@ function createTurnstileMock() {
   }
 }
 
+const idleStatusFetcher: typeof fetch = () => new Promise<Response>(() => {})
+
+function renderCozy(props: CozyFriendsAppProps = {}) {
+  return render(<CozyFriendsApp statusFetcher={idleStatusFetcher} {...props} />)
+}
+
 function renderWithTurnstile(props: Omit<CozyFriendsAppProps, 'turnstileSiteKey'> = {}) {
   const turnstile = createTurnstileMock()
-  render(<CozyFriendsApp turnstileClient={turnstile.client} turnstileSiteKey="test-site-key" {...props} />)
+  render(
+    <CozyFriendsApp
+      statusFetcher={idleStatusFetcher}
+      turnstileClient={turnstile.client}
+      turnstileSiteKey="test-site-key"
+      {...props}
+    />
+  )
   return turnstile
 }
 
@@ -84,7 +106,7 @@ afterEach(() => {
 
 describe('Cozy Friends field guide', () => {
   test('renders the reference field guide with current server details', () => {
-    render(<CozyFriendsApp />)
+    renderCozy()
 
     expect(HERO_HEADING).toBe('A cozy place, built together.')
     expect(HERO_BODY).toBe(
@@ -120,8 +142,44 @@ describe('Cozy Friends field guide', () => {
     expect(renderedPage).not.toMatch(/cozyfriends\.net/i)
     expect(renderedPage).not.toContain('June 15, 2025')
   })
+  test('renders the live player count after a valid status response', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(JSON.stringify({ online: true, players: 3, maxPlayers: 15 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    )
+
+    render(<PlayerCountIndicator fetcher={fetcher} refreshMs={60_000} />)
+    expect(screen.getByTestId('player-count')).toHaveTextContent(SERVER_STATUS_LOADING)
+
+    await act(async () => {})
+
+    const indicator = screen.getByTestId('player-count')
+    expect(indicator).toHaveTextContent(SERVER_STATUS_LABEL)
+    expect(indicator).toHaveTextContent(`3 / 15 ${SERVER_STATUS_PLAYERS}`)
+    expect(indicator).toHaveAttribute('data-state', 'online')
+    expect(fetcher).toHaveBeenCalledWith('/api/minecraft/status', { cache: 'no-store' })
+  })
+
+  test('fails closed when the status endpoint is unavailable or malformed', async () => {
+    const unavailableFetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('', { status: 503 }))
+    render(<PlayerCountIndicator fetcher={unavailableFetcher} refreshMs={60_000} />)
+
+    await act(async () => {})
+
+    const unavailableIndicator = screen.getByTestId('player-count')
+    expect(unavailableIndicator).toHaveTextContent(SERVER_STATUS_UNAVAILABLE)
+    expect(unavailableIndicator).toHaveAttribute('data-state', 'unavailable')
+    expect(parseMinecraftStatus({ online: true, players: 16, maxPlayers: 15 })).toBeNull()
+    expect(parseMinecraftStatus({ online: true, players: 3, maxPlayers: 15 })).toEqual({
+      players: 3,
+      maxPlayers: 15
+    })
+  })
+
   test('renders the fixed raster artwork with decorative image semantics', () => {
-    render(<CozyFriendsApp />)
+    renderCozy()
 
     const heroArtwork = screen.getByRole('img', { name: /.+/ })
     const heroImage = within(heroArtwork).getByRole('presentation', { hidden: true })
@@ -179,14 +237,14 @@ describe('Cozy Friends field guide', () => {
     })
     expect(LAUNCH_DATE_ISO).toBe('2026-08-13T20:00:00-04:00')
 
-    render(<CozyFriendsApp now={() => LAUNCH_DATE_MS} />)
+    renderCozy({ now: () => LAUNCH_DATE_MS })
     expect(screen.getByRole('status')).toHaveTextContent(COUNTDOWN_LIVE)
   })
 
   test('copies the address and exposes the Copied state', async () => {
     const writeText = vi.fn<(value: string) => Promise<void>>().mockResolvedValue(undefined)
     setClipboard(writeText)
-    render(<CozyFriendsApp />)
+    renderCozy()
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy server address' }))
@@ -199,7 +257,7 @@ describe('Cozy Friends field guide', () => {
   test('shows the exact failure feedback when clipboard writing fails', async () => {
     const writeText = vi.fn<(value: string) => Promise<void>>().mockRejectedValue(new Error('denied'))
     setClipboard(writeText)
-    render(<CozyFriendsApp />)
+    renderCozy()
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy server address' }))
@@ -227,7 +285,7 @@ describe('Cozy Friends field guide', () => {
   test('fails closed when Turnstile is not ready', async () => {
     const fetchMock = vi.fn<typeof fetch>()
     setFetch(fetchMock)
-    render(<CozyFriendsApp turnstileSiteKey="" />)
+    renderCozy({ turnstileSiteKey: '' })
 
     fireEvent.change(screen.getByRole('textbox', { name: NAME_REQUEST_LABEL }), { target: { value: 'Dan' } })
     fireEvent.change(screen.getByRole('textbox', { name: USERNAME_REQUEST_LABEL }), { target: { value: 'CozyDan_' } })
@@ -235,7 +293,7 @@ describe('Cozy Friends field guide', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
 
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/usernames', expect.anything())
     expect(screen.getByRole('alert')).toHaveTextContent(TURNSTILE_UNAVAILABLE)
   })
 
@@ -251,7 +309,7 @@ describe('Cozy Friends field guide', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Request an allowlist spot' }))
     })
 
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/usernames', expect.anything())
     expect(screen.getByRole('alert')).toHaveTextContent(TURNSTILE_REQUIRED)
     await act(async () => {
       turnstile.expire()
@@ -280,7 +338,7 @@ describe('Cozy Friends field guide', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Dan', username: 'CozyDan_', turnstileToken: 'test-turnstile-token' })
     })
-    expect(screen.getByRole('status')).toHaveTextContent(USERNAME_REQUEST_SUCCESS)
+    expect(screen.getByText(USERNAME_REQUEST_SUCCESS)).toBeInTheDocument()
   })
 
   test('shows the request failure copy when the API rejects the submission', async () => {

@@ -17,6 +17,10 @@ import {
   NAME_REQUEST_VALIDATION,
   RESOURCE_LINKS,
   SERVER_ADDRESS,
+  SERVER_STATUS_LABEL,
+  SERVER_STATUS_LOADING,
+  SERVER_STATUS_PLAYERS,
+  SERVER_STATUS_UNAVAILABLE,
   TURNSTILE_LABEL,
   TURNSTILE_REQUIRED,
   TURNSTILE_UNAVAILABLE,
@@ -315,9 +319,11 @@ export function getCountdownSnapshot(nowMs: number, launchMs = LAUNCH_DATE_MS): 
 
 type LaunchCountdownProps = {
   now?: () => number
+  statusFetcher?: StatusFetcher
+  statusRefreshMs?: number
 }
 
-export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
+export function LaunchCountdown({ now = Date.now, statusFetcher, statusRefreshMs }: LaunchCountdownProps) {
   const [snapshot, setSnapshot] = useState(() => getCountdownSnapshot(now()))
 
   useEffect(() => {
@@ -367,9 +373,121 @@ export function LaunchCountdown({ now = Date.now }: LaunchCountdownProps) {
               </dl>
             </>
           )}
+          <PlayerCountIndicator fetcher={statusFetcher} refreshMs={statusRefreshMs} />
         </div>
       </div>
     </section>
+  )
+}
+
+type MinecraftStatusPayload = {
+  players: number
+  maxPlayers: number
+}
+
+type StatusFetcher = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+
+type PlayerCountState =
+  | { kind: 'loading' }
+  | ({ kind: 'online' } & MinecraftStatusPayload)
+  | { kind: 'unavailable' }
+
+const MINECRAFT_STATUS_API_PATH = '/api/minecraft/status'
+const PLAYER_STATUS_REFRESH_MS = 30_000
+
+export function parseMinecraftStatus(payload: unknown): MinecraftStatusPayload | null {
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const candidate = payload as {
+    online?: unknown
+    players?: unknown
+    maxPlayers?: unknown
+  }
+  if (
+    candidate.online !== true
+    || typeof candidate.players !== 'number'
+    || !Number.isInteger(candidate.players)
+    || typeof candidate.maxPlayers !== 'number'
+    || !Number.isInteger(candidate.maxPlayers)
+    || candidate.players < 0
+    || candidate.maxPlayers < candidate.players
+  ) {
+    return null
+  }
+
+  return {
+    players: candidate.players,
+    maxPlayers: candidate.maxPlayers
+  }
+}
+
+type PlayerCountIndicatorProps = {
+  fetcher?: StatusFetcher
+  refreshMs?: number
+}
+
+export function PlayerCountIndicator({
+  fetcher = fetch,
+  refreshMs = PLAYER_STATUS_REFRESH_MS
+}: PlayerCountIndicatorProps = {}) {
+  const [state, setState] = useState<PlayerCountState>({ kind: 'loading' })
+
+  useEffect(() => {
+    let active = true
+
+    const loadStatus = async () => {
+      try {
+        const response = await fetcher(MINECRAFT_STATUS_API_PATH, { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error(`Status request failed with ${response.status}`)
+        }
+        const payload = parseMinecraftStatus(await response.json())
+        if (!payload) {
+          throw new Error('Status response was invalid')
+        }
+        if (active) {
+          setState({ kind: 'online', ...payload })
+        }
+      } catch {
+        if (active) {
+          setState({ kind: 'unavailable' })
+        }
+      }
+    }
+
+    void loadStatus()
+    const timer = window.setInterval(() => {
+      void loadStatus()
+    }, refreshMs)
+
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [fetcher, refreshMs])
+
+  return (
+    <div
+      className={`player-count-indicator player-count-indicator--${state.kind}`}
+      data-testid="player-count"
+      data-state={state.kind}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span className="player-count-indicator__label">{SERVER_STATUS_LABEL}</span>
+      <span className="player-count-indicator__value">
+        <span className="player-count-indicator__dot" aria-hidden="true" />
+        {state.kind === 'loading' ? SERVER_STATUS_LOADING : null}
+        {state.kind === 'unavailable' ? SERVER_STATUS_UNAVAILABLE : null}
+        {state.kind === 'online' ? (
+          <>
+            <strong>{state.players} / {state.maxPlayers}</strong> {SERVER_STATUS_PLAYERS}
+          </>
+        ) : null}
+      </span>
+    </div>
   )
 }
 
@@ -417,9 +535,18 @@ export type CozyFriendsAppProps = {
   clock?: () => number
   turnstileClient?: TurnstileClient
   turnstileSiteKey?: string
+  statusFetcher?: StatusFetcher
+  statusRefreshMs?: number
 }
 
-export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }: CozyFriendsAppProps = {}) {
+export function CozyFriendsApp({
+  now,
+  clock,
+  turnstileClient,
+  turnstileSiteKey,
+  statusFetcher,
+  statusRefreshMs
+}: CozyFriendsAppProps = {}) {
   const configuredTurnstileSiteKey = (turnstileSiteKey ?? import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '').trim()
   const countdownNow = now ?? clock
   const [copyState, setCopyState] = useState<CopyState>('idle')
@@ -488,7 +615,7 @@ export function CozyFriendsApp({ now, clock, turnstileClient, turnstileSiteKey }
           </div>
         </section>
 
-        <LaunchCountdown now={countdownNow} />
+        <LaunchCountdown now={countdownNow} statusFetcher={statusFetcher} statusRefreshMs={statusRefreshMs} />
 
         <section className="join-band ruled-band" id="join" aria-labelledby="join-heading">
           <div className="page-frame">

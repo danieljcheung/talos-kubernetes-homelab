@@ -10,12 +10,16 @@ import re
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Lock
+from time import monotonic
 from typing import Any
 from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 import psycopg
 from psycopg.rows import dict_row
+
+from minecraft_status import MinecraftStatusError, fetch_status
 
 TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
 
@@ -25,10 +29,21 @@ ADMIN_TOKEN = os.environ.get("APPROVAL_ADMIN_TOKEN", "")
 SYNC_TOKEN = os.environ.get("APPROVAL_SYNC_TOKEN", "")
 TURNSTILE_SECRET_KEY = os.environ.get("TURNSTILE_SECRET_KEY", "")
 TURNSTILE_EXPECTED_HOSTNAME = os.environ.get("TURNSTILE_EXPECTED_HOSTNAME", "")
+MINECRAFT_STATUS_HOST = os.environ.get(
+    "MINECRAFT_STATUS_HOST",
+    "homestead-headless.cozy-friends.svc.cluster.local",
+)
+MINECRAFT_STATUS_PORT = int(os.environ.get("MINECRAFT_STATUS_PORT", "25565"))
+MINECRAFT_STATUS_TIMEOUT = float(os.environ.get("MINECRAFT_STATUS_TIMEOUT", "2"))
+MINECRAFT_STATUS_CACHE_SECONDS = 10.0
 PORT = int(os.environ.get("PORT", "8080"))
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,16}$")
 MAX_NAME_LENGTH = 80
 MAX_BODY_LENGTH = 4096
+
+_minecraft_status_cache: tuple[float, dict[str, Any]] | None = None
+_minecraft_status_cache_lock = Lock()
+
 
 
 SCHEMA = """
@@ -80,6 +95,36 @@ ON username_submissions(status, submitted_at)
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+def get_minecraft_status() -> dict[str, Any]:
+    global _minecraft_status_cache
+
+    now = monotonic()
+    with _minecraft_status_cache_lock:
+        if (
+            _minecraft_status_cache is not None
+            and now - _minecraft_status_cache[0] < MINECRAFT_STATUS_CACHE_SECONDS
+        ):
+            return dict(_minecraft_status_cache[1])
+
+    players = fetch_status(
+        MINECRAFT_STATUS_HOST,
+        MINECRAFT_STATUS_PORT,
+        timeout=MINECRAFT_STATUS_TIMEOUT,
+    )
+    payload = {
+        "online": True,
+        **players,
+        "checkedAt": utc_now().isoformat(),
+    }
+    with _minecraft_status_cache_lock:
+        _minecraft_status_cache = (monotonic(), payload)
+    return dict(payload)
+
+
+def unavailable_minecraft_status() -> dict[str, Any]:
+    return {"online": False, "error": "Server status unavailable"}
+
+
 
 
 def connect() -> psycopg.Connection:
@@ -200,6 +245,12 @@ class ApprovalHandler(BaseHTTPRequestHandler):
                 self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {"status": "database unavailable"})
                 return
             self.send_json(HTTPStatus.OK, {"status": "ready"})
+            return
+        if path == "/api/minecraft/status":
+            try:
+                self.send_json(HTTPStatus.OK, get_minecraft_status())
+            except (MinecraftStatusError, OSError, TimeoutError):
+                self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, unavailable_minecraft_status())
             return
         if path == "/api/whitelist/approved.txt":
             if not self.authorize(SYNC_TOKEN):

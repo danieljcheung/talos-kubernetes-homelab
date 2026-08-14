@@ -446,6 +446,61 @@ code:focus-visible {
   letter-spacing: -0.12em;
   line-height: 1;
 }
+.player-count-indicator {
+  display: grid;
+  gap: 6px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--soft-line);
+  color: #4a5144;
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.player-count-indicator__label {
+  color: var(--olive-dark);
+  font-family: var(--pixel);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.player-count-indicator__value {
+  display: inline-flex;
+  min-height: 1.4em;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.player-count-indicator__value strong {
+  color: var(--olive-dark);
+  font-family: var(--pixel);
+  font-weight: 800;
+}
+
+.player-count-indicator__dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--wheat);
+}
+
+.player-count-indicator--online .player-count-indicator__dot {
+  background: var(--moss);
+  box-shadow: 0 0 0 3px rgba(101, 118, 76, 0.12);
+}
+
+.player-count-indicator--unavailable {
+  color: var(--clay);
+}
+
+.player-count-indicator--unavailable .player-count-indicator__dot {
+  background: var(--clay);
+}
+
 
 .launch-countdown--live {
   padding: 20px 0 20px 28px;

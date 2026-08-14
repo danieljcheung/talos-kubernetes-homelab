@@ -2,7 +2,7 @@
 
 This directory delivers the static Cozy Friends guide at `cozy.popinvites.com`. The
 site source and Vite build live under `site/cozy`; this workload serves the three
-generated browser assets plus the five fixed WebP assets from a restricted
+generated browser assets plus the six fixed WebP assets from a restricted
 Kubernetes namespace.
 
 ## Public guide contract
@@ -93,7 +93,7 @@ The generator owns both ConfigMap sections and emits deterministic key order.
 It rejects rendered output at or above Kubernetes' 1 MiB object limit, so keep
 the complete generated manifest below that limit. Portfolio defaults continue
 to preserve their existing `binaryData` section and do not apply this Cozy
-five-file contract.
+asset contract.
 
 ## Kubernetes delivery
 
@@ -156,6 +156,14 @@ validates `name` as 1–80 characters and `username` against
 `cozy.popinvites.com` before it persists anything. Missing/invalid Turnstile
 tokens and invalid fields must not create a request.
 
+The public guide also reads same-host `GET /api/minecraft/status`. The API
+performs a short-timeout Minecraft Java Server List Ping against the internal
+`homestead-headless.cozy-friends.svc.cluster.local:25565` Service and returns
+only aggregate `online`, `players`, `maxPlayers`, and `checkedAt` fields. It
+does not use RCON and never exposes player names, IPs, MOTD, version, or the
+raw status response. Successful results are cached briefly to avoid polling
+Minecraft for every browser request; an unavailable server returns HTTP 503.
+
 The `/api` Ingress path targets the internal
 `Service/cozy-friends-approval-api` on port 8080; it is ClusterIP-only. The
 token-authenticated operator page is `https://cozy.popinvites.com/#admin`.
@@ -195,8 +203,8 @@ issues.
 ## Files
 
 - `namespace.yaml`: restricted application namespace
-- `configmap.yaml`: generated text assets plus the five fixed WebP `binaryData` keys
-- `deployment.yaml`: hardened one-replica nginx workload mounting all eight keys
+- `configmap.yaml`: generated text assets plus the six fixed WebP `binaryData` keys
+- `deployment.yaml`: hardened one-replica nginx workload mounting all nine keys
 - `service.yaml`: internal port 80 to 8080 ClusterIP Service
 - `ingress.yaml`: `cozy.popinvites.com` nginx Ingress
 - `networkpolicy.yaml`: ingress-nginx-only ingress and default-deny egress

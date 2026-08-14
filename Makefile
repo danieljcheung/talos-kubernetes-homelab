@@ -1,4 +1,4 @@
-.PHONY: help build sync verify test build-cozy sync-cozy verify-cozy
+.PHONY: help build sync verify test build-cozy sync-cozy verify-cozy test-api
 
 help: ## Show this help message
 	@echo "Talos Kubernetes Homelab Site targets:"
@@ -29,8 +29,13 @@ verify-cozy: ## Verify Cozy Friends ConfigMap matches built assets
 	@echo "Verifying Cozy Friends ConfigMap matches built assets..."
 	@node scripts/generate-configmap.mjs --check --dist site/dist-cozy --configmap manifests/cozy-friends-site/configmap.yaml
 
-test: ## Run frontend and generator tests
+test-api: ## Run approval API unit tests
+	@python3 -m unittest discover -s cozy-approval-api -p 'test_*.py'
+
+test: ## Run frontend, generator, and approval API tests
 	@echo "Running frontend tests..."
 	@npm --prefix site test
 	@echo "Running generator unit tests..."
 	@node --test scripts/generate-configmap.test.mjs
+	@echo "Running approval API unit tests..."
+	@python3 -m unittest discover -s cozy-approval-api -p 'test_*.py'
